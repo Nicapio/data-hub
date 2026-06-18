@@ -62,6 +62,9 @@ body{min-height:100vh;color:var(--text);
 .tab:hover:not(.active){color:var(--text)}
 .tabcontent{display:none}
 .tabcontent.active{display:block}
+/* Lab tab stays rendered (off-screen) when inactive so its iframe keeps running */
+#tab-lab{display:block;position:absolute;left:-99999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+#tab-lab.active{position:static;left:auto;width:auto;height:auto;overflow:visible;opacity:1;pointer-events:auto}
 
 /* ---- layout ---- */
 .page{padding:0 16px 20px;max-width:1700px;margin:0 auto}
@@ -1647,8 +1650,7 @@ async function backtestSymbol(sym) {
   const rec = await dbGet(sym);
   if (!rec) { alert('Symbol not in library.'); return; }
   switchTab('lab');
-  ensureLabFrame();   // ensure load kicked off now
-  setTimeout(() => sendToLab(rec.bars, sym + ' (' + rec.bars.length + ' bars)'), 50);
+  sendToLab(rec.bars, sym + ' (' + rec.bars.length + ' bars)');
 }
 async function backtestCurrent() {
   const sym = $('prevSym').value;
@@ -1658,8 +1660,7 @@ async function backtestCurrent() {
   const from = $('prevFrom').value, to = $('prevTo').value;
   const bars = rec.bars.filter(b => (!from||b.date>=from) && (!to||b.date<=to));
   switchTab('lab');
-  ensureLabFrame();
-  setTimeout(() => sendToLab(bars, sym + ' ' + from + '\u2192' + to), 50);
+  sendToLab(bars, sym + ' ' + from + '\u2192' + to);
 }
 
 /* ---- tabs ---- */
@@ -1674,10 +1675,7 @@ function switchTab(name) {
     const ps=$('prevSym');
     if(ps.value) loadPreview();
   }
-  if (name==='lab') {
-    // wait two frames so the tab is actually visible/painted before loading the iframe
-    requestAnimationFrame(() => requestAnimationFrame(() => ensureLabFrame()));
-  }
+  if (name==='lab') ensureLabFrame();
 }
 
 /* ---- boot ---- */
@@ -1690,8 +1688,8 @@ openDB().then(async () => {
   loadCfg();
   await refreshLibrary();
   log('ok', 'IndexedDB ready. Configure source and paste tickers to begin.');
-  // preload the Strategy Lab iframe in the background so it's booted before you click Backtest
-  setTimeout(() => { try { ensureLabFrame(); } catch(e){} }, 200);
+  // load the Strategy Lab iframe right away (it's always in the DOM, off-screen until its tab is active)
+  try { ensureLabFrame(); } catch(e){}
 }).catch(e => {
   $('storBadge').textContent = 'DB error';
   $('storBadge').className = 'badge err';
