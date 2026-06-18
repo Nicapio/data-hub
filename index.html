@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FutuQuant DataHub</title>
+<style>
+:root{
+  --abyss:#060d14; --deep:#0a1a22;
+  --glass:rgba(255,255,255,.055); --glass2:rgba(255,255,255,.085);
+  --edge:rgba(255,255,255,.13); --edge-soft:rgba(255,255,255,.07);
+  --text:#e8eef2; --dim:#93a6b0;
+  --aurora1:#2dd4bf; --aurora2:#34d399; --aurora3:#3b82f6; --aurora4:#8b5cf6;
+  --green:#3ddc97; --red:#ff6b81; --amber:#ffc861; --orange:#fb923c;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  --r:18px; --r-in:12px;
+}
+*{box-sizing:border-box;margin:0}
+html{scrollbar-color:rgba(255,255,255,.18) transparent}
+body{min-height:100vh;color:var(--text);
+  font:13px/1.55 "Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  background:linear-gradient(165deg,var(--abyss) 0%,var(--deep) 55%,#07131c 100%);
+  background-attachment:fixed}
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;
+  will-change:transform;mix-blend-mode:screen}
+.b1{width:55vw;height:55vw;left:-12vw;top:-18vh;
+  background:radial-gradient(circle at 35% 35%,var(--aurora1),transparent 65%);
+  animation:drift1 52s ease-in-out infinite alternate}
+.b2{width:48vw;height:48vw;right:-15vw;top:8vh;
+  background:radial-gradient(circle at 60% 40%,var(--aurora3),transparent 65%);
+  animation:drift2 64s ease-in-out infinite alternate}
+.b3{width:42vw;height:42vw;left:22vw;bottom:-22vh;
+  background:radial-gradient(circle at 50% 50%,var(--aurora2),transparent 62%);
+  animation:drift3 58s ease-in-out infinite alternate}
+@keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(9vw,7vh) scale(1.12)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1.05)}to{transform:translate(-8vw,10vh) scale(.95)}}
+@keyframes drift3{from{transform:translate(0,0) rotate(0)}to{transform:translate(6vw,-8vh) rotate(18deg)}}
+@media(prefers-reduced-motion:reduce){.blob{animation:none}}
+
+/* ---- nav bar ---- */
+.top{display:flex;align-items:center;gap:12px;padding:12px 18px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:10;background:rgba(8,17,24,.6);
+  backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+  border-bottom:1px solid var(--edge-soft)}
+.brand{font-size:17px;font-weight:700;letter-spacing:.02em}
+.brand b{background:linear-gradient(90deg,var(--aurora1),var(--aurora3));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--edge);color:var(--dim);background:var(--glass)}
+.badge.ok{color:var(--green);border-color:rgba(61,220,151,.4)}
+.badge.warn{color:var(--amber);border-color:rgba(255,200,97,.4)}
+.badge.err{color:var(--red);border-color:rgba(255,107,129,.4)}
+.grow{flex:1}
+
+/* ---- tabs ---- */
+.tabs{display:flex;gap:4px;padding:14px 16px 0;max-width:1700px;margin:0 auto}
+.tab{padding:7px 18px;border-radius:12px 12px 0 0;font-size:12px;cursor:pointer;
+  color:var(--dim);background:var(--glass);border:1px solid var(--edge-soft);
+  border-bottom:none;transition:all .18s;letter-spacing:.03em}
+.tab.active{color:var(--text);background:rgba(255,255,255,.11);border-color:var(--edge)}
+.tab:hover:not(.active){color:var(--text)}
+.tabcontent{display:none}
+.tabcontent.active{display:block}
+
+/* ---- layout ---- */
+.page{padding:0 16px 20px;max-width:1700px;margin:0 auto}
+.grid2{display:grid;gap:14px;grid-template-columns:340px 1fr}
+.grid3{display:grid;gap:14px;grid-template-columns:300px 1fr 340px}
+@media(max-width:1200px){.grid2,.grid3{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stack>*+*{margin-top:12px}
+
+/* ---- panel ---- */
+.panel{position:relative;border-radius:var(--r);overflow:hidden;background:var(--glass);
+  backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);
+  border:1px solid var(--edge);
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10)}
+.panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);
+  padding:11px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  border-bottom:1px solid var(--edge-soft)}
+.body{padding:12px 14px}
+
+/* ---- forms ---- */
+label{font-size:11px;color:var(--dim);letter-spacing:.04em;display:block;margin-bottom:3px}
+input,select,textarea{width:100%;border-radius:10px;padding:7px 10px;font-size:12px;
+  font-family:var(--mono);color:var(--text);
+  background:rgba(0,0,0,.25);border:1px solid var(--edge);transition:border-color .18s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--aurora1);
+  box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+select option{background:#0c1a22;color:var(--text)}
+textarea{resize:vertical;min-height:90px;line-height:1.4}
+
+/* ---- buttons ---- */
+button{border-radius:999px;padding:6px 14px;font-size:12px;cursor:pointer;
+  color:var(--text);background:var(--glass2);border:1px solid var(--edge);
+  transition:all .2s;white-space:nowrap}
+button:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.12)}
+button.primary{border:none;color:#04211c;font-weight:600;
+  background:linear-gradient(120deg,var(--aurora1),var(--aurora2));
+  box-shadow:0 6px 18px -6px rgba(45,212,191,.55)}
+button.primary:hover{filter:brightness(1.08)}
+button.danger{border-color:rgba(255,107,129,.4);color:var(--red)}
+button.danger:hover{background:rgba(255,107,129,.12)}
+button.sm{padding:3px 10px;font-size:11px}
+button:disabled{opacity:.4;cursor:default;pointer-events:none}
+button:focus-visible{outline:2px solid var(--aurora1);outline-offset:2px}
+
+/* ---- KPI cards ---- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.kpi{border-radius:var(--r-in);padding:10px 12px;background:var(--glass2);
+  border:1px solid var(--edge-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.kpi .l{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.kpi .v{font-family:var(--mono);font-size:17px;margin-top:4px;font-weight:600}
+.kpi .v.pos{color:var(--green)} .kpi .v.neg{color:var(--red)}
+.kpi .v.warn{color:var(--amber)}
+
+/* ---- tables ---- */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{text-align:left;color:var(--dim);font-weight:500;padding:6px 8px;white-space:nowrap;
+  border-bottom:1px solid var(--edge-soft);letter-spacing:.04em;position:sticky;top:0;
+  background:rgba(10,20,28,.9);z-index:1}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.042);vertical-align:middle}
+tbody tr:hover{background:rgba(255,255,255,.04)}
+.num{text-align:right}.pos{color:var(--green)}.neg{color:var(--red)}
+.scroll{max-height:480px;overflow:auto;border-radius:var(--r-in)}
+.scroll2{max-height:280px;overflow:auto;border-radius:var(--r-in)}
+
+/* ---- progress bar ---- */
+.prog-wrap{border-radius:999px;background:rgba(0,0,0,.3);height:6px;
+  border:1px solid var(--edge-soft);overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--aurora1),var(--aurora2));
+  transition:width .4s ease;width:0%}
+
+/* ---- log ---- */
+.log-box{border-radius:var(--r-in);background:rgba(0,0,0,.28);border:1px solid var(--edge-soft);
+  padding:10px 12px;font-family:var(--mono);font-size:11px;
+  max-height:220px;overflow-y:auto;line-height:1.6}
+.log-box .ok{color:var(--green)} .log-box .er{color:var(--red)}
+.log-box .inf{color:var(--aurora1)} .log-box .warn{color:var(--amber)}
+
+/* ---- chip list (symbol list) ---- */
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;
+  border-radius:var(--r-in);padding:8px;
+  background:rgba(0,0,0,.22);border:1px solid var(--edge-soft)}
+.chip{display:inline-flex;align-items:center;gap:5px;
+  border-radius:999px;padding:3px 10px;font-family:var(--mono);font-size:11px;
+  background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:var(--aurora1)}
+.chip .rm{cursor:pointer;color:var(--dim);font-size:13px;line-height:1}
+.chip .rm:hover{color:var(--red)}
+.chip.done{background:rgba(61,220,151,.1);border-color:rgba(61,220,151,.3);color:var(--green)}
+.chip.fail{background:rgba(255,107,129,.1);border-color:rgba(255,107,129,.3);color:var(--red)}
+.chip.active{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--aurora3);
+  animation:pulse .8s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+
+/* ---- status dot ---- */
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.dot.green{background:var(--green)} .dot.red{background:var(--red)}
+.dot.amber{background:var(--amber)} .dot.blue{background:var(--aurora3)}
+
+/* ---- source selector ---- */
+.src-btns{display:flex;gap:6px;flex-wrap:wrap}
+.src-btn{border-radius:10px;padding:5px 12px;font-size:11px;cursor:pointer;
+  color:var(--dim);background:var(--glass);border:1px solid var(--edge-soft);transition:all .18s}
+.src-btn.sel{color:var(--aurora1);border-color:rgba(45,212,191,.5);background:rgba(45,212,191,.1)}
+.src-btn:hover:not(.sel){color:var(--text)}
+
+/* ---- misc ---- */
+.hint{color:var(--dim);font-size:11px}
+.mono{font-family:var(--mono)}
+.sep{border:none;border-top:1px solid var(--edge-soft);margin:10px 0}
+canvas{width:100%;border-radius:var(--r-in);background:rgba(0,0,0,.22);border:1px solid var(--edge-soft)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+a{color:var(--aurora1)}
+
+/* ---- empty state ---- */
+.empty{text-align:center;padding:32px 16px;color:var(--dim);font-size:12px}
+.empty .icon{font-size:28px;margin-bottom:8px;opacity:.5}
+
+/* ---- storage bar ---- */
+.stor-bar{border-radius:999px;background:rgba(0,0,0,.3);height:8px;
+  border:1px solid var(--edge-soft);overflow:hidden;margin-top:4px}
+.stor-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--aurora3),var(--aurora4))}
+
+/* ---- preview chart ---- */
+#previewWrap{display:none}
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<!-- NAV -->
+<div class="top">
+  <div class="brand">FutuQuant <b>DataHub</b></div>
+  <span class="badge" id="storBadge">IndexedDB ready</span>
+  <span class="badge" id="countBadge">0 symbols stored</span>
+  <div class="grow"></div>
+  <button class="sm" onclick="exportAllCSV()">Export all CSV</button>
+  <button class="sm danger" onclick="clearAllData()">Clear DB</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('download')">① Download</div>
+  <div class="tab" onclick="switchTab('library')">② Library</div>
+  <div class="tab" onclick="switchTab('preview')">③ Preview</div>
+  <div class="tab" onclick="switchTab('export')">④ Export / Integrate</div>
+</div>
+
+<!-- ==================== TAB: DOWNLOAD ==================== -->
+<div id="tab-download" class="tabcontent active">
+<div class="page" style="padding-top:14px">
+<div class="grid2">
+
+  <!-- LEFT: config -->
+  <div class="col">
+    <div class="panel"><h2>Data source</h2><div class="body stack">
+      <div>
+        <label>Primary source <span class="hint">(fallback chain is automatic)</span></label>
+        <div class="src-btns" id="srcBtns">
+          <div class="src-btn sel" data-src="yahoo" onclick="setSrc(this)">Yahoo Finance</div>
+          <div class="src-btn" data-src="alpha" onclick="setSrc(this)">Alpha Vantage</div>
+          <div class="src-btn" data-src="polygon" onclick="setSrc(this)">Polygon.io</div>
+          <div class="src-btn" data-src="twelvedata" onclick="setSrc(this)">Twelve Data</div>
+        </div>
+      </div>
+      <div id="keyField" style="display:none">
+        <label id="keyLabel">API Key</label>
+        <input type="password" id="apiKey" placeholder="paste key…" oninput="saveKey()">
+        <div class="hint" id="keyHint" style="margin-top:4px"></div>
+      </div>
+      <div>
+        <label>Proxy (for Yahoo, required in browser)</label>
+        <select id="proxySel" onchange="saveCfg()">
+          <option value="corsproxy">corsproxy.io (default)</option>
+          <option value="allorigins">allorigins.win</option>
+          <option value="thingproxy">thingproxy.freeboard.io</option>
+          <option value="direct">Direct (no proxy — may fail CORS)</option>
+        </select>
+        <div class="hint" style="margin-top:4px">Yahoo Finance blocks direct browser requests. A public CORS proxy routes around this.</div>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>History range</h2><div class="body stack">
+      <div class="row">
+        <div style="flex:1"><label>Period</label>
+          <select id="periodSel" onchange="saveCfg()">
+            <option value="1y" selected>1 Year (daily)</option>
+            <option value="2y">2 Years (daily)</option>
+            <option value="5y">5 Years (daily)</option>
+            <option value="max">Maximum available</option>
+          </select></div>
+        <div style="flex:1"><label>Interval</label>
+          <select id="intervalSel" onchange="saveCfg()">
+            <option value="1d" selected>1 Day</option>
+            <option value="1wk">1 Week</option>
+          </select></div>
+      </div>
+      <div><label>Concurrency (parallel downloads)</label>
+        <select id="concurSel" onchange="saveCfg()">
+          <option value="1">1 — safe / slow</option>
+          <option value="3" selected>3 — balanced</option>
+          <option value="5">5 — fast</option>
+          <option value="8">8 — aggressive</option>
+        </select></div>
+      <div><label>Delay between batches (ms)</label>
+        <input type="number" id="delayInp" value="1200" min="200" max="10000" step="100" onchange="saveCfg()"></div>
+    </div></div>
+
+    <div class="panel"><h2>Symbol list</h2><div class="body stack">
+      <div>
+        <label>Paste tickers (comma, space, or newline separated)</label>
+        <textarea id="tickerBox" placeholder="AAPL, MSFT, NVDA, TSLA&#10;AMZN GOOG META&#10;TSM BABA BIDU&#10;…"></textarea>
+      </div>
+      <div class="row">
+        <button class="sm" onclick="loadPreset('sp500top')">S&amp;P 100</button>
+        <button class="sm" onclick="loadPreset('tech')">Big Tech</button>
+        <button class="sm" onclick="loadPreset('hkex')">HK Stocks</button>
+        <button class="sm" onclick="loadPreset('etfs')">Major ETFs</button>
+        <button class="sm" onclick="clearTickers()">Clear</button>
+      </div>
+      <div>
+        <label>Parsed symbols</label>
+        <div class="chips" id="chipArea"><span class="hint" style="padding:2px">— paste tickers above —</span></div>
+      </div>
+      <div class="row">
+        <span class="hint" id="tickerCount">0 symbols</span>
+        <button class="primary" id="dlBtn" onclick="startDownload()" style="margin-left:auto">▶ Download all</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- RIGHT: progress -->
+  <div class="col">
+    <div class="panel"><h2>Download progress</h2><div class="body stack">
+      <div class="kpis" id="dlKpis">
+        <div class="kpi"><div class="l">Queued</div><div class="v" id="kQueued">0</div></div>
+        <div class="kpi"><div class="l">Downloaded</div><div class="v pos" id="kDone">0</div></div>
+        <div class="kpi"><div class="l">Failed</div><div class="v neg" id="kFail">0</div></div>
+        <div class="kpi"><div class="l">Total rows</div><div class="v" id="kRows">0</div></div>
+        <div class="kpi"><div class="l">Elapsed</div><div class="v" id="kElapsed">—</div></div>
+        <div class="kpi"><div class="l">Status</div><div class="v" id="kStatus">Idle</div></div>
+      </div>
+      <div>
+        <div class="row" style="margin-bottom:6px">
+          <span class="hint" id="progLabel">Ready</span>
+          <span class="hint" style="margin-left:auto" id="progPct">0%</span>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" id="progBar"></div></div>
+      </div>
+      <div class="row">
+        <button id="pauseBtn" onclick="togglePause()" disabled>⏸ Pause</button>
+        <button onclick="stopDownload()" id="stopBtn" disabled>⏹ Stop</button>
+        <button onclick="retryFailed()" id="retryBtn" disabled>↺ Retry failed</button>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Live log</h2><div class="body">
+      <div class="log-box" id="logBox"><span class="inf">Waiting for download…</span></div>
+    </div></div>
+
+    <div class="panel"><h2>Queue</h2><div class="body">
+      <div class="chips" id="queueChips" style="max-height:200px;overflow-y:auto">
+        <span class="hint" style="padding:2px">— no download started —</span>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ==================== TAB: LIBRARY ==================== -->
+<div id="tab-library" class="tabcontent">
+<div class="page" style="padding-top:14px">
+<div class="grid2">
+
+  <div class="col">
+    <div class="panel"><h2>Storage overview</h2><div class="body stack">
+      <div class="kpis" id="libKpis">
+        <div class="kpi"><div class="l">Symbols</div><div class="v" id="lkSym">0</div></div>
+        <div class="kpi"><div class="l">Total bars</div><div class="v" id="lkBars">0</div></div>
+        <div class="kpi"><div class="l">DB size (est.)</div><div class="v" id="lkSize">—</div></div>
+        <div class="kpi"><div class="l">Oldest bar</div><div class="v" id="lkOldest">—</div></div>
+      </div>
+      <div>
+        <div class="row" style="justify-content:space-between;margin-bottom:4px">
+          <span class="hint">Storage used</span><span class="hint" id="storPct">0%</span></div>
+        <div class="stor-bar"><div class="stor-fill" id="storFill" style="width:0%"></div></div>
+      </div>
+      <div class="row">
+        <button class="sm" onclick="refreshLibrary()">↺ Refresh</button>
+        <button class="sm" onclick="validateAll()">✓ Validate all</button>
+        <input type="text" id="libSearch" placeholder="filter symbols…" style="flex:1;width:auto"
+          oninput="filterLibrary(this.value)">
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Symbol detail <span class="hint" id="detailSym"></span></h2>
+      <div class="body" id="detailBody">
+        <div class="empty"><div class="icon">📋</div>Select a symbol from the table →</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel" style="flex:1">
+      <h2>Stored symbols
+        <span class="badge" id="libCount">0</span>
+        <span class="grow"></span>
+        <button class="sm" onclick="exportAllCSV()">Export all CSV</button>
+        <button class="sm danger" style="margin-left:4px" onclick="deleteSelected()">Delete selected</button>
+      </h2>
+      <div class="body"><div class="scroll" style="max-height:620px">
+        <table>
+          <thead><tr>
+            <th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th>
+            <th>Symbol</th><th>Source</th><th class="num">Bars</th>
+            <th class="num">From</th><th class="num">To</th>
+            <th class="num">Last close</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="libRows"></tbody>
+        </table>
+      </div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ==================== TAB: PREVIEW ==================== -->
+<div id="tab-preview" class="tabcontent">
+<div class="page" style="padding-top:14px">
+<div class="grid3">
+
+  <div class="col">
+    <div class="panel"><h2>Chart settings</h2><div class="body stack">
+      <div>
+        <label>Symbol</label>
+        <select id="prevSym" onchange="loadPreview()"><option value="">— select —</option></select>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>From</label><input type="date" id="prevFrom" onchange="loadPreview()"></div>
+        <div style="flex:1"><label>To</label><input type="date" id="prevTo" onchange="loadPreview()"></div>
+      </div>
+      <div>
+        <label>Indicators</label>
+        <div class="row" id="indToggles">
+          <label style="display:flex;gap:4px;align-items:center;color:var(--text)">
+            <input type="checkbox" id="indSMA" checked onchange="loadPreview()"> SMA 20</label>
+          <label style="display:flex;gap:4px;align-items:center;color:var(--text)">
+            <input type="checkbox" id="indEMA" onchange="loadPreview()"> EMA 50</label>
+          <label style="display:flex;gap:4px;align-items:center;color:var(--text)">
+            <input type="checkbox" id="indBB" onchange="loadPreview()"> Bollinger</label>
+        </div>
+      </div>
+      <div>
+        <label>Chart type</label>
+        <select id="chartType" onchange="loadPreview()">
+          <option value="line">Line (close)</option>
+          <option value="candle">Candlestick</option>
+          <option value="ohlc">OHLC bars</option>
+        </select>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Stats snapshot</h2>
+      <div class="body kpis" id="prevStats">
+        <div class="empty" style="grid-column:1/-1;padding:16px">Select a symbol to see stats</div>
+      </div>
+    </div>
+
+    <div class="panel"><h2>Raw data <span class="hint" id="rawCount"></span></h2>
+      <div class="body"><div class="scroll2">
+        <table><thead><tr>
+          <th>Date</th><th class="num">Open</th><th class="num">High</th>
+          <th class="num">Low</th><th class="num">Close</th><th class="num">Volume</th>
+        </tr></thead>
+        <tbody id="rawRows"></tbody></table>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="col" style="grid-column:span 2">
+    <div class="panel"><h2 id="prevTitle">Price chart</h2>
+      <div class="body">
+        <canvas id="prevCanvas" height="320"></canvas>
+      </div>
+    </div>
+    <div class="panel"><h2>Volume</h2>
+      <div class="body">
+        <canvas id="volCanvas" height="120"></canvas>
+      </div>
+    </div>
+    <div class="panel"><h2>RSI (14)</h2>
+      <div class="body">
+        <canvas id="rsiCanvas" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ==================== TAB: EXPORT ==================== -->
+<div id="tab-export" class="tabcontent">
+<div class="page" style="padding-top:14px">
+<div class="grid2">
+
+  <div class="col">
+    <div class="panel"><h2>Export data</h2><div class="body stack">
+      <div>
+        <label>Format</label>
+        <select id="expFmt">
+          <option value="csv">CSV (one file per symbol)</option>
+          <option value="csv-combined">CSV (single combined file)</option>
+          <option value="json">JSON (array per symbol)</option>
+        </select>
+      </div>
+      <div>
+        <label>Symbols to export</label>
+        <select id="expSym">
+          <option value="all">All stored symbols</option>
+        </select>
+      </div>
+      <div>
+        <label>Columns</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px">
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" checked disabled> Date</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expOpen" checked> Open</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expHigh" checked> High</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expLow" checked> Low</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expClose" checked> Close</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expVol" checked> Volume</label>
+          <label style="display:flex;gap:5px;align-items:center;color:var(--text)"><input type="checkbox" id="expAdj"> Adj Close</label>
+        </div>
+      </div>
+      <button class="primary" onclick="doExport()">⬇ Export</button>
+    </div></div>
+
+    <div class="panel"><h2>Incremental update</h2><div class="body stack">
+      <div class="hint">Re-download only missing bars (from last stored date to today) for selected symbols.</div>
+      <div>
+        <label>Symbols</label>
+        <select id="incrSym">
+          <option value="all">All stored symbols</option>
+        </select>
+      </div>
+      <button onclick="runIncremental()">↺ Update missing bars</button>
+    </div></div>
+  </div>
+
+  <div class="col">
+    <div class="panel"><h2>Integrate with FutuQuant Strategy Lab</h2><div class="body stack">
+      <div class="hint">Generate a JavaScript snippet to paste into your Strategy Lab HTML. It registers stored symbols as custom datasets so you can use live downloaded data in your backtests.</div>
+      <div>
+        <label>Symbol to integrate</label>
+        <select id="intSym"><option value="">— choose —</option></select>
+      </div>
+      <div>
+        <label>Dataset label in Strategy Lab</label>
+        <input type="text" id="intLabel" placeholder="e.g. AAPL 1Y Live">
+      </div>
+      <button onclick="genIntegration()">Generate snippet</button>
+      <div>
+        <label>Generated code — paste inside your Strategy Lab &lt;script&gt;</label>
+        <textarea id="intCode" style="min-height:160px;font-size:11px" readonly placeholder="snippet appears here…"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="sm" onclick="copySnippet()">Copy to clipboard</button>
+          <span class="hint" id="copyMsg"></span>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="panel"><h2>Validation report</h2><div class="body">
+      <div class="scroll2">
+        <table><thead><tr>
+          <th>Symbol</th><th class="num">Bars</th><th>Issues</th><th class="num">Score</th>
+        </tr></thead>
+        <tbody id="valRows"><tr><td colspan="4" class="hint" style="padding:12px">
+          Run "Validate all" from the Library tab
+        </td></tr></tbody>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+/* ========================================================================
+   FutuQuant DataHub — core engine
+   Architecture:
+     DB          IndexedDB wrapper (stores OHLCV bars per symbol)
+     SOURCES     pluggable fetchers: Yahoo, AlphaVantage, Polygon, TwelveData
+     DOWNLOADER  queue-based parallel downloader with retry + pause
+     UI          tab/panel renderers
+   ======================================================================== */
+
+/* ---- global state ---- */
+let CFG = {
+  src: 'yahoo', proxy: 'corsproxy', period: '1y', interval: '1d',
+  concur: 3, delay: 1200, keys: {}
+};
+let DL = { running: false, paused: false, queue: [], done: [], failed: [],
+           totalRows: 0, startTime: null, timer: null };
+let libCache = [];
+
+/* ---- helpers ---- */
+const $ = id => document.getElementById(id);
+const fmt2 = v => typeof v === 'number' ? v.toFixed(2) : v;
+const fmtNum = v => v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M'
+  : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : String(v);
+const today = () => new Date().toISOString().slice(0,10);
+const daysAgo = d => { const dt = new Date(); dt.setDate(dt.getDate()-d); return dt.toISOString().slice(0,10); };
+function saveKey() {
+  CFG.keys[CFG.src] = $('apiKey').value;
+  localStorage.setItem('dh_cfg', JSON.stringify(CFG));
+}
+function saveCfg() {
+  CFG.proxy = $('proxySel').value;
+  CFG.period = $('periodSel').value;
+  CFG.interval = $('intervalSel').value;
+  CFG.concur = +$('concurSel').value;
+  CFG.delay = +$('delayInp').value;
+  localStorage.setItem('dh_cfg', JSON.stringify(CFG));
+}
+function loadCfg() {
+  try { const s = localStorage.getItem('dh_cfg'); if(s) CFG = {...CFG,...JSON.parse(s)}; } catch(e){}
+  $('proxySel').value = CFG.proxy;
+  $('periodSel').value = CFG.period;
+  $('intervalSel').value = CFG.interval;
+  $('concurSel').value = CFG.concur;
+  $('delayInp').value = CFG.delay;
+  setSrcUI(CFG.src);
+}
+
+/* ---- IndexedDB ---- */
+const DB_NAME = 'FutuQuantDataHub', DB_VER = 2;
+let db = null;
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('symbols')) {
+        const s = d.createObjectStore('symbols', { keyPath: 'symbol' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbGet(symbol) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction('symbols', 'readonly');
+    const req = tx.objectStore('symbols').get(symbol);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbPut(record) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction('symbols', 'readwrite');
+    const req = tx.objectStore('symbols').put(record);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbDelete(symbol) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction('symbols', 'readwrite');
+    const req = tx.objectStore('symbols').delete(symbol);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbGetAll() {
+  return new Promise((res, rej) => {
+    const tx = db.transaction('symbols', 'readonly');
+    const req = tx.objectStore('symbols').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+/* ---- data sources ---- */
+function proxyWrap(url) {
+  switch(CFG.proxy) {
+    case 'corsproxy':   return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    case 'allorigins':  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    case 'thingproxy':  return `https://thingproxy.freeboard.io/fetch/${url}`;
+    default: return url;
+  }
+}
+
+function periodToRange(period) {
+  const end = new Date();
+  const start = new Date();
+  if (period === '1y') start.setFullYear(start.getFullYear()-1);
+  else if (period === '2y') start.setFullYear(start.getFullYear()-2);
+  else if (period === '5y') start.setFullYear(start.getFullYear()-5);
+  else if (period === 'max') start.setFullYear(1990);
+  return {
+    start: Math.floor(start.getTime()/1000),
+    end: Math.floor(end.getTime()/1000)
+  };
+}
+
+const SOURCES = {
+
+  yahoo: {
+    name: 'Yahoo Finance',
+    needsKey: false,
+    async fetch(symbol, period, interval) {
+      const { start, end } = periodToRange(period);
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}` +
+        `?period1=${start}&period2=${end}&interval=${interval}&events=history&includeAdjustedClose=true`;
+      const r = await fetch(proxyWrap(url), { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      const result = j?.chart?.result?.[0];
+      if (!result) throw new Error('No data returned');
+      const ts = result.timestamp;
+      const q = result.indicators.quote[0];
+      const adj = result.indicators.adjclose?.[0]?.adjclose;
+      const bars = [];
+      for (let i = 0; i < ts.length; i++) {
+        if (q.close[i] == null) continue;
+        bars.push({
+          date: new Date(ts[i]*1000).toISOString().slice(0,10),
+          open:  +q.open[i].toFixed(4),
+          high:  +q.high[i].toFixed(4),
+          low:   +q.low[i].toFixed(4),
+          close: +q.close[i].toFixed(4),
+          adjClose: adj ? +adj[i].toFixed(4) : null,
+          volume: q.volume[i] || 0
+        });
+      }
+      return bars;
+    }
+  },
+
+  alpha: {
+    name: 'Alpha Vantage',
+    needsKey: true,
+    keyHint: 'Free key: alphavantage.co/support/#api-key',
+    async fetch(symbol, period, interval) {
+      const key = CFG.keys.alpha;
+      if (!key) throw new Error('Alpha Vantage API key required');
+      const fn = interval === '1d' ? 'TIME_SERIES_DAILY_ADJUSTED' : 'TIME_SERIES_WEEKLY_ADJUSTED';
+      const size = period === '1y' ? 'compact' : 'full';
+      const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${symbol}&outputsize=${size}&apikey=${key}`;
+      const r = await fetch(proxyWrap(url));
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (j['Note']) throw new Error('Rate limit hit — try again later');
+      if (j['Error Message']) throw new Error(j['Error Message']);
+      const key2 = Object.keys(j).find(k => k.includes('Time Series'));
+      if (!key2) throw new Error('Unexpected response');
+      const raw = j[key2];
+      const cutoff = period === '1y' ? daysAgo(365) : period === '2y' ? daysAgo(730)
+        : period === '5y' ? daysAgo(1826) : '1900-01-01';
+      return Object.entries(raw)
+        .filter(([date]) => date >= cutoff)
+        .map(([date, v]) => ({
+          date,
+          open:  +parseFloat(v['1. open']).toFixed(4),
+          high:  +parseFloat(v['2. high']).toFixed(4),
+          low:   +parseFloat(v['3. low']).toFixed(4),
+          close: +parseFloat(v['4. close']).toFixed(4),
+          adjClose: +parseFloat(v['5. adjusted close'] || v['4. close']).toFixed(4),
+          volume: parseInt(v['6. volume'] || v['5. volume'] || 0)
+        }))
+        .sort((a,b) => a.date.localeCompare(b.date));
+    }
+  },
+
+  polygon: {
+    name: 'Polygon.io',
+    needsKey: true,
+    keyHint: 'Free key: polygon.io — 5 calls/min on free tier',
+    async fetch(symbol, period, interval) {
+      const key = CFG.keys.polygon;
+      if (!key) throw new Error('Polygon API key required');
+      const { start, end } = periodToRange(period);
+      const from = new Date(start*1000).toISOString().slice(0,10);
+      const to   = new Date(end*1000).toISOString().slice(0,10);
+      const mul = interval === '1d' ? 1 : 7;
+      const span = interval === '1d' ? 'day' : 'week';
+      let url = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/${mul}/${span}/${from}/${to}?adjusted=true&sort=asc&limit=50000&apiKey=${key}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (j.status === 'ERROR') throw new Error(j.error || 'Polygon error');
+      return (j.results || []).map(b => ({
+        date: new Date(b.t).toISOString().slice(0,10),
+        open:  +b.o.toFixed(4), high: +b.h.toFixed(4),
+        low:   +b.l.toFixed(4), close: +b.c.toFixed(4),
+        adjClose: +b.c.toFixed(4), volume: b.v || 0
+      }));
+    }
+  },
+
+  twelvedata: {
+    name: 'Twelve Data',
+    needsKey: true,
+    keyHint: 'Free key: twelvedata.com — 800 calls/day',
+    async fetch(symbol, period, interval) {
+      const key = CFG.keys.twelvedata;
+      if (!key) throw new Error('Twelve Data API key required');
+      const outputsize = period === '1y' ? 252 : period === '2y' ? 504
+        : period === '5y' ? 1260 : 5000;
+      const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&apikey=${key}`;
+      const r = await fetch(proxyWrap(url));
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (j.status === 'error') throw new Error(j.message);
+      return (j.values || []).reverse().map(v => ({
+        date:     v.datetime.slice(0,10),
+        open:     +parseFloat(v.open).toFixed(4),
+        high:     +parseFloat(v.high).toFixed(4),
+        low:      +parseFloat(v.low).toFixed(4),
+        close:    +parseFloat(v.close).toFixed(4),
+        adjClose: null,
+        volume:   parseInt(v.volume || 0)
+      }));
+    }
+  }
+};
+
+/* ---- fallback chain ---- */
+async function fetchWithFallback(symbol, period, interval) {
+  const chain = [CFG.src, ...Object.keys(SOURCES).filter(s=>s!==CFG.src)];
+  let lastErr;
+  for (const src of chain) {
+    if (!SOURCES[src]) continue;
+    if (SOURCES[src].needsKey && !CFG.keys[src]) continue;
+    try {
+      const bars = await SOURCES[src].fetch(symbol, period, interval);
+      if (!bars || bars.length === 0) throw new Error('Empty response');
+      return { bars, source: src };
+    } catch(e) {
+      lastErr = e;
+      log(`warn`, `${symbol}: ${SOURCES[src].name} failed (${e.message}), trying next…`);
+    }
+  }
+  throw lastErr || new Error('All sources failed');
+}
+
+/* ---- ticker parsing ---- */
+function parseTickers(raw) {
+  return [...new Set(
+    raw.toUpperCase().split(/[\s,;\n\r\t]+/).map(s=>s.trim())
+       .filter(s => /^[A-Z0-9.\-^]{1,12}$/.test(s))
+  )];
+}
+function renderChips(tickers, containerId, opts={}) {
+  const c = $(containerId);
+  if (!tickers.length) { c.innerHTML = '<span class="hint" style="padding:2px">— empty —</span>'; return; }
+  c.innerHTML = tickers.map(t =>
+    `<div class="chip${opts.classes?.[t]?' '+opts.classes[t]:''}" id="chip_${containerId}_${t}">
+      ${t}${opts.removable !== false ? `<span class="rm" onclick="removeTicker('${t}')">×</span>` : ''}
+    </div>`).join('');
+}
+let tickerList = [];
+function onTickerInput() {
+  tickerList = parseTickers($('tickerBox').value);
+  renderChips(tickerList, 'chipArea');
+  $('tickerCount').textContent = `${tickerList.length} symbol${tickerList.length!==1?'s':''}`;
+}
+function removeTicker(t) {
+  tickerList = tickerList.filter(x=>x!==t);
+  renderChips(tickerList, 'chipArea');
+  $('tickerCount').textContent = `${tickerList.length} symbols`;
+}
+function clearTickers() { $('tickerBox').value=''; tickerList=[]; onTickerInput(); }
+
+const PRESETS = {
+  sp500top: `AAPL MSFT NVDA AMZN GOOGL META TSLA BRK.B JPM AVGO
+             LLY COST UNH XOM HD PG NFLX ABBV BAC MA
+             CVX CRM ADBE WMT AMD MRK PEP ORCL TMO ACN
+             KO CSCO LIN MCD DIS TXN DHR ABT INTC NOW
+             INTU QCOM PM RTX AMGN BKNG MS GS UPS SPGI
+             PLD BLK SYK T CAT VRTX C LOW CB ISRG MDT
+             BMY SBUX GILD SHW ADI REGN MMC DE ELV EOG
+             MDLZ FI CI CL ITW KLAC EW DUK USB MU
+             SO NSC HCA APH PYPL CARR MCO CME SNPS CDNS`,
+  tech: `AAPL MSFT NVDA GOOGL META AMZN TSLA AMD INTC AVGO
+         QCOM TXN AMAT LRCX KLAC ASML TSM ORCL IBM CRM
+         NOW ADBE SNOW PLTR MRVL NET PANW CRWD DDOG FTNT`,
+  hkex: `0700.HK 0005.HK 0941.HK 0388.HK 2318.HK 1299.HK
+         0883.HK 0016.HK 1211.HK 9988.HK 2269.HK 3690.HK
+         0027.HK 0001.HK 0003.HK 0011.HK 0066.HK 0002.HK`,
+  etfs: `SPY QQQ IWM DIA GLD SLV TLT HYG LQD XLK XLF XLE
+         XLV XLI XLP XLU XLRE XLC XLB VNQ EEM EFA VWO
+         ARKK ARKG ARKW ARKF ARKQ`
+};
+function loadPreset(name) {
+  $('tickerBox').value = (PRESETS[name]||'').trim().replace(/\s+/g,' ');
+  onTickerInput();
+}
+
+/* ---- source selector ---- */
+function setSrc(el) {
+  CFG.src = el.dataset.src;
+  setSrcUI(CFG.src);
+  localStorage.setItem('dh_cfg', JSON.stringify(CFG));
+}
+function setSrcUI(src) {
+  document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('sel', b.dataset.src===src));
+  const s = SOURCES[src];
+  if (s && s.needsKey) {
+    $('keyField').style.display='';
+    $('keyLabel').textContent = s.name + ' API Key';
+    $('keyHint').textContent = s.keyHint||'';
+    $('apiKey').value = CFG.keys[src]||'';
+  } else {
+    $('keyField').style.display='none';
+  }
+}
+
+/* ---- logger ---- */
+function log(type, msg) {
+  const box = $('logBox');
+  const line = document.createElement('div');
+  line.className = type;
+  const ts = new Date().toTimeString().slice(0,8);
+  line.textContent = `[${ts}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  // keep max 200 lines
+  while (box.children.length > 200) box.removeChild(box.firstChild);
+}
+
+/* ---- downloader ---- */
+async function startDownload() {
+  if (DL.running) return;
+  const tickers = tickerList;
+  if (!tickers.length) { alert('Add at least one symbol first.'); return; }
+  DL = { running: true, paused: false,
+         queue: [...tickers], done: [], failed: [],
+         totalRows: 0, startTime: Date.now(), timer: null };
+  $('dlBtn').disabled = true;
+  $('pauseBtn').disabled = false;
+  $('stopBtn').disabled = false;
+  $('retryBtn').disabled = true;
+  $('logBox').innerHTML = '';
+  log('inf', `Starting download: ${tickers.length} symbols · source: ${SOURCES[CFG.src].name} · concur: ${CFG.concur}`);
+  updateDlKpis();
+  renderQueueChips();
+  DL.timer = setInterval(updateElapsed, 1000);
+  await runQueue();
+}
+
+async function runQueue() {
+  const { concur, delay } = CFG;
+  const chunks = [];
+  while (DL.queue.length) chunks.push(DL.queue.splice(0, concur));
+  for (const batch of chunks) {
+    if (!DL.running) break;
+    while (DL.paused) await sleep(300);
+    await Promise.all(batch.map(sym => downloadOne(sym)));
+    updateDlKpis();
+    renderQueueChips();
+    if (DL.queue.length) await sleep(delay);
+  }
+  DL.running = false;
+  clearInterval(DL.timer);
+  $('dlBtn').disabled = false;
+  $('pauseBtn').disabled = true;
+  $('stopBtn').disabled = true;
+  $('retryBtn').disabled = DL.failed.length === 0;
+  $('kStatus').textContent = 'Done';
+  log('ok', `✓ Complete — Downloaded: ${DL.done.length} · Failed: ${DL.failed.length} · Rows: ${fmtNum(DL.totalRows)}`);
+  updateDlKpis();
+  await refreshLibrary();
+  updateCountBadge();
+}
+
+async function downloadOne(symbol) {
+  setChipState(symbol, 'active');
+  log('inf', `→ ${symbol} fetching…`);
+  const maxRetry = 2;
+  for (let attempt = 0; attempt <= maxRetry; attempt++) {
+    try {
+      const { bars, source } = await fetchWithFallback(symbol, CFG.period, CFG.interval);
+      const existing = await dbGet(symbol);
+      let merged = bars;
+      if (existing) {
+        const existDates = new Set(existing.bars.map(b=>b.date));
+        const newBars = bars.filter(b=>!existDates.has(b.date));
+        merged = [...existing.bars, ...newBars].sort((a,b)=>a.date.localeCompare(b.date));
+      }
+      await dbPut({ symbol, bars: merged, source,
+        downloadedAt: new Date().toISOString(),
+        meta: { from: merged[0]?.date, to: merged[merged.length-1]?.date, count: merged.length }
+      });
+      DL.done.push(symbol);
+      DL.totalRows += bars.length;
+      setChipState(symbol, 'done');
+      log('ok', `✓ ${symbol} — ${bars.length} bars (${source})`);
+      return;
+    } catch(e) {
+      if (attempt < maxRetry) {
+        log('warn', `  ${symbol} retry ${attempt+1}… (${e.message})`);
+        await sleep(1500 * (attempt+1));
+      } else {
+        DL.failed.push(symbol);
+        setChipState(symbol, 'fail');
+        log('er', `✗ ${symbol} failed: ${e.message}`);
+      }
+    }
+  }
+}
+
+function setChipState(sym, state) {
+  const el = $(`chip_queueChips_${sym}`);
+  if (el) el.className = 'chip '+state;
+}
+
+function togglePause() {
+  DL.paused = !DL.paused;
+  $('pauseBtn').textContent = DL.paused ? '▶ Resume' : '⏸ Pause';
+  log('inf', DL.paused ? 'Paused.' : 'Resumed.');
+}
+function stopDownload() {
+  DL.running = false; DL.queue = [];
+  clearInterval(DL.timer);
+  log('warn', 'Download stopped by user.');
+  $('dlBtn').disabled = false;
+  $('pauseBtn').disabled = true;
+  $('stopBtn').disabled = true;
+  $('retryBtn').disabled = DL.failed.length === 0;
+}
+function retryFailed() {
+  if (!DL.failed.length) return;
+  tickerList = [...DL.failed];
+  renderChips(tickerList, 'chipArea');
+  $('tickerBox').value = tickerList.join(' ');
+  startDownload();
+}
+
+function updateDlKpis() {
+  const total = DL.done.length + DL.failed.length + (DL.queue?.length||0);
+  const done = DL.done.length + DL.failed.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  $('kQueued').textContent = DL.queue?.length || 0;
+  $('kDone').textContent = DL.done.length;
+  $('kFail').textContent = DL.failed.length;
+  $('kRows').textContent = fmtNum(DL.totalRows);
+  $('kStatus').textContent = DL.running ? (DL.paused ? 'Paused' : 'Running') : 'Idle';
+  $('progBar').style.width = pct + '%';
+  $('progPct').textContent = pct + '%';
+  $('progLabel').textContent = DL.running
+    ? `Processing ${done} / ${total}`
+    : `Done — ${DL.done.length} ok, ${DL.failed.length} failed`;
+}
+function updateElapsed() {
+  if (!DL.startTime) return;
+  const s = Math.round((Date.now()-DL.startTime)/1000);
+  $('kElapsed').textContent = s < 60 ? s+'s' : Math.floor(s/60)+'m '+s%60+'s';
+}
+function renderQueueChips() {
+  const all = [...DL.done.map(s=>({s,c:'done'})), ...DL.failed.map(s=>({s,c:'fail'})), ...(DL.queue||[]).map(s=>({s,c:''}))];
+  const qc = $('queueChips');
+  if (!all.length) { qc.innerHTML='<span class="hint" style="padding:2px">—</span>'; return; }
+  qc.innerHTML = all.map(({s,c})=>
+    `<div class="chip ${c}" id="chip_queueChips_${s}">${s}</div>`
+  ).join('');
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ---- library ---- */
+async function refreshLibrary() {
+  const all = await dbGetAll();
+  libCache = all.sort((a,b)=>a.symbol.localeCompare(b.symbol));
+  renderLibrary(libCache);
+  updateLibKpis(libCache);
+  populateSelectors(libCache);
+}
+
+function renderLibrary(rows, filter='') {
+  const filtered = filter ? rows.filter(r=>r.symbol.includes(filter.toUpperCase())) : rows;
+  $('libCount').textContent = filtered.length;
+  $('libRows').innerHTML = filtered.map(r => {
+    const last = r.bars[r.bars.length-1];
+    const prev = r.bars[r.bars.length-2];
+    const chg = prev ? ((last.close-prev.close)/prev.close*100) : null;
+    const cls = chg > 0 ? 'pos' : chg < 0 ? 'neg' : '';
+    return `<tr>
+      <td><input type="checkbox" class="rowChk" data-sym="${r.symbol}"></td>
+      <td><b>${r.symbol}</b></td>
+      <td style="color:var(--dim)">${r.source||'—'}</td>
+      <td class="num">${r.bars.length}</td>
+      <td class="num" style="color:var(--dim)">${r.meta?.from||'—'}</td>
+      <td class="num" style="color:var(--dim)">${r.meta?.to||'—'}</td>
+      <td class="num">
+        <span>${fmt2(last?.close)}</span>
+        ${chg!=null?`<span class="${cls}" style="font-size:10px;margin-left:4px">${chg>0?'+':''}${chg.toFixed(2)}%</span>`:''}
+      </td>
+      <td>
+        <button class="sm" onclick="showDetail('${r.symbol}')">Detail</button>
+        <button class="sm" onclick="previewSymbol('${r.symbol}')">Chart</button>
+        <button class="sm" onclick="exportOne('${r.symbol}')">CSV</button>
+        <button class="sm danger" onclick="deleteOne('${r.symbol}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" class="empty">No symbols stored. Download some first.</td></tr>`;
+}
+
+function filterLibrary(val) { renderLibrary(libCache, val); }
+
+async function updateLibKpis(rows) {
+  const totalBars = rows.reduce((a,r)=>a+r.bars.length,0);
+  const all_dates = rows.flatMap(r=>r.bars.map(b=>b.date));
+  const oldest = all_dates.length ? all_dates.reduce((a,b)=>a<b?a:b) : '—';
+  $('lkSym').textContent = rows.length;
+  $('lkBars').textContent = fmtNum(totalBars);
+  $('lkOldest').textContent = oldest;
+  $('countBadge').textContent = `${rows.length} symbols stored`;
+  // estimate DB size
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est) {
+      const used = (est.usage/1024/1024).toFixed(1);
+      const quota = (est.quota/1024/1024/1024).toFixed(1);
+      const pct = Math.min(100, Math.round(est.usage/est.quota*100));
+      $('lkSize').textContent = `${used} MB`;
+      $('storFill').style.width = pct+'%';
+      $('storPct').textContent = pct+'%';
+    }
+  } catch(e) { $('lkSize').textContent = '—'; }
+}
+
+async function showDetail(symbol) {
+  const rec = await dbGet(symbol);
+  if (!rec) return;
+  const bars = rec.bars;
+  const closes = bars.map(b=>b.close);
+  const vols   = bars.map(b=>b.volume);
+  const hi = Math.max(...closes), lo = Math.min(...closes);
+  const ret = ((closes[closes.length-1]/closes[0])-1)*100;
+  const avgVol = vols.reduce((a,b)=>a+b,0)/vols.length;
+
+  $('detailSym').textContent = symbol;
+  $('detailBody').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">Bars</div><div class="v">${bars.length}</div></div>
+      <div class="kpi"><div class="l">Period</div><div class="v" style="font-size:12px">${rec.meta?.from} → ${rec.meta?.to}</div></div>
+      <div class="kpi"><div class="l">Period Return</div><div class="v ${ret>=0?'pos':'neg'}">${ret>=0?'+':''}${ret.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="l">52w High</div><div class="v pos">${fmt2(hi)}</div></div>
+      <div class="kpi"><div class="l">52w Low</div><div class="v neg">${fmt2(lo)}</div></div>
+      <div class="kpi"><div class="l">Avg Volume</div><div class="v">${fmtNum(Math.round(avgVol))}</div></div>
+      <div class="kpi"><div class="l">Source</div><div class="v" style="font-size:12px">${rec.source}</div></div>
+      <div class="kpi"><div class="l">Downloaded</div><div class="v" style="font-size:11px">${rec.downloadedAt?.slice(0,10)||'—'}</div></div>
+    </div>`;
+}
+
+function toggleAll(checked) {
+  document.querySelectorAll('.rowChk').forEach(c=>c.checked=checked);
+}
+async function deleteSelected() {
+  const syms = [...document.querySelectorAll('.rowChk:checked')].map(c=>c.dataset.sym);
+  if (!syms.length) { alert('Select symbols to delete.'); return; }
+  if (!confirm(`Delete ${syms.length} symbol(s)?`)) return;
+  for (const s of syms) await dbDelete(s);
+  await refreshLibrary();
+}
+async function deleteOne(sym) {
+  if (!confirm(`Delete ${sym}?`)) return;
+  await dbDelete(sym);
+  await refreshLibrary();
+}
+
+function populateSelectors(rows) {
+  const syms = rows.map(r=>r.symbol);
+  // preview tab
+  const ps = $('prevSym');
+  const pv = ps.value;
+  ps.innerHTML = '<option value="">— select —</option>' + syms.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if (pv) ps.value = pv;
+  // export tab
+  [$('expSym'), $('incrSym'), $('intSym')].forEach(sel => {
+    const v = sel.value;
+    sel.innerHTML = (sel === $('intSym') ? '<option value="">— choose —</option>' : '<option value="all">All stored symbols</option>') +
+      syms.map(s=>`<option value="${s}">${s}</option>`).join('');
+    if (v) sel.value = v;
+  });
+}
+
+/* ---- preview / chart ---- */
+let previewData = null;
+
+async function previewSymbol(sym) {
+  switchTab('preview');
+  $('prevSym').value = sym;
+  await loadPreview();
+}
+
+async function loadPreview() {
+  const sym = $('prevSym').value;
+  if (!sym) return;
+  const rec = await dbGet(sym);
+  if (!rec) return;
+  previewData = rec;
+
+  // set default date range
+  const allDates = rec.bars.map(b=>b.date);
+  const defFrom = allDates[Math.max(0, allDates.length-252)];
+  if (!$('prevFrom').value) $('prevFrom').value = defFrom;
+  if (!$('prevTo').value)   $('prevTo').value = allDates[allDates.length-1];
+
+  const from = $('prevFrom').value;
+  const to   = $('prevTo').value;
+  const bars = rec.bars.filter(b => (!from || b.date >= from) && (!to || b.date <= to));
+
+  $('prevTitle').textContent = `${sym} — ${bars.length} bars`;
+
+  // stats
+  const closes = bars.map(b=>b.close);
+  const vols   = bars.map(b=>b.volume);
+  const ret    = closes.length > 1 ? ((closes[closes.length-1]/closes[0])-1)*100 : 0;
+  const hi = Math.max(...closes), lo = Math.min(...closes);
+  $('prevStats').innerHTML = [
+    {l:'Symbol', v:sym},
+    {l:'Last Close', v:fmt2(closes[closes.length-1])},
+    {l:'Return', v:(ret>=0?'+':'')+ret.toFixed(1)+'%', c:ret>=0?'pos':'neg'},
+    {l:'High', v:fmt2(hi), c:'pos'},
+    {l:'Low', v:fmt2(lo), c:'neg'},
+    {l:'Bars', v:bars.length},
+    {l:'Avg Vol', v:fmtNum(Math.round(vols.reduce((a,b)=>a+b,0)/vols.length||0))}
+  ].map(({l,v,c})=>`<div class="kpi"><div class="l">${l}</div><div class="v${c?' '+c:''}">${v}</div></div>`).join('');
+
+  // raw table (last 50)
+  const recent = bars.slice(-50).reverse();
+  $('rawRows').innerHTML = recent.map(b=>
+    `<tr><td>${b.date}</td><td class="num">${fmt2(b.open)}</td><td class="num">${fmt2(b.high)}</td>
+     <td class="num">${fmt2(b.low)}</td><td class="num">${fmt2(b.close)}</td>
+     <td class="num">${fmtNum(b.volume)}</td></tr>`
+  ).join('');
+  $('rawCount').textContent = `last ${recent.length} of ${bars.length}`;
+
+  drawCharts(bars);
+}
+
+function sma(arr, p) {
+  return arr.map((_,i) => {
+    if (i < p-1) return null;
+    let s=0; for(let j=i-p+1;j<=i;j++) s+=arr[j]; return s/p;
+  });
+}
+function ema(arr, p) {
+  const k=2/(p+1), out=[];
+  let e=null;
+  for(let i=0;i<arr.length;i++){
+    if(i<p-1){out.push(null);continue;}
+    if(e===null){let s=0;for(let j=0;j<p;j++)s+=arr[j];e=s/p;}
+    else e=arr[i]*k+e*(1-k);
+    out.push(e);
+  }
+  return out;
+}
+function rsiArr(arr, p=14) {
+  const out=[];
+  for(let i=0;i<arr.length;i++){
+    if(i<=p){out.push(null);continue;}
+    let g=0,l=0;
+    for(let j=i-p+1;j<=i;j++){const d=arr[j]-arr[j-1];if(d>0)g+=d;else l-=d;}
+    g/=p;l/=p;
+    out.push(l===0?100:100-100/(1+g/l));
+  }
+  return out;
+}
+function bollinger(arr, p=20, mult=2) {
+  return arr.map((_,i)=>{
+    if(i<p-1)return{mid:null,up:null,dn:null};
+    const sl=arr.slice(i-p+1,i+1);
+    const m=sl.reduce((a,b)=>a+b)/p;
+    const sd=Math.sqrt(sl.reduce((a,b)=>a+(b-m)**2,0)/p);
+    return{mid:m,up:m+mult*sd,dn:m-mult*sd};
+  });
+}
+
+function drawCharts(bars) {
+  const closes = bars.map(b=>b.close);
+  const highs  = bars.map(b=>b.high);
+  const lows   = bars.map(b=>b.low);
+  const opens  = bars.map(b=>b.open);
+  const vols   = bars.map(b=>b.volume);
+  const labels = bars.map(b=>b.date);
+
+  const showSMA = $('indSMA').checked;
+  const showEMA = $('indEMA').checked;
+  const showBB  = $('indBB').checked;
+  const chartType = $('chartType').value;
+
+  // -- price chart --
+  const cv = $('prevCanvas');
+  const ctx = cv.getContext('2d');
+  const DPR = window.devicePixelRatio||1;
+  cv.width = cv.clientWidth*DPR;
+  cv.height = 320*DPR;
+  ctx.scale(DPR, DPR);
+  const W = cv.clientWidth, H = 320;
+  const pad = {t:20, r:10, b:30, l:60};
+  const iW = W-pad.l-pad.r, iH = H-pad.t-pad.b;
+
+  // data extents
+  let lo = Math.min(...lows), hi = Math.max(...highs);
+  const smaVals = showSMA ? sma(closes,20) : [];
+  const emaVals = showEMA ? ema(closes,50) : [];
+  const bbVals  = showBB  ? bollinger(closes,20) : [];
+  if (showBB) {
+    const bbs = bbVals.flatMap(v=>[v.up,v.dn]).filter(v=>v!=null);
+    if (bbs.length) { lo=Math.min(lo,...bbs); hi=Math.max(hi,...bbs); }
+  }
+  const yOf = v => pad.t + iH * (1-(v-lo)/(hi-lo));
+  const xOf = i => pad.l + iW * (i/(bars.length-1||1));
+
+  ctx.clearRect(0,0,W,H);
+
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  for(let i=0;i<=5;i++){
+    const y=pad.t+iH*i/5;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    const v=hi-(hi-lo)*i/5;
+    ctx.fillStyle='rgba(147,166,176,.7)';ctx.font=`${10*DPR/DPR}px ui-monospace`;
+    ctx.textAlign='right';ctx.fillText(v.toFixed(2),pad.l-4,y+4);
+  }
+  ctx.setLineDash([]);
+
+  if (chartType === 'line') {
+    // Bollinger
+    if (showBB) {
+      const bbUp = bbVals.map((v,i)=>v.up!=null?{x:xOf(i),y:yOf(v.up)}:null).filter(Boolean);
+      const bbDn = bbVals.map((v,i)=>v.dn!=null?{x:xOf(i),y:yOf(v.dn)}:null).filter(Boolean);
+      ctx.fillStyle='rgba(139,92,246,.08)';
+      ctx.beginPath();
+      bbUp.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+      bbDn.slice().reverse().forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(139,92,246,.4)';ctx.lineWidth=1;
+      [bbUp,bbDn].forEach(pts=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();});
+    }
+    // close line
+    ctx.strokeStyle='var(--aurora1)';ctx.lineWidth=1.5;
+    ctx.beginPath();closes.forEach((v,i)=>{i?ctx.lineTo(xOf(i),yOf(v)):ctx.moveTo(xOf(i),yOf(v));});ctx.stroke();
+    // SMA
+    if (showSMA) {
+      ctx.strokeStyle='#ffc861';ctx.lineWidth=1.2;
+      ctx.beginPath();let first=true;
+      smaVals.forEach((v,i)=>{if(v==null)return;first?(ctx.moveTo(xOf(i),yOf(v)),first=false):ctx.lineTo(xOf(i),yOf(v));});ctx.stroke();
+    }
+    // EMA
+    if (showEMA) {
+      ctx.strokeStyle='#fb923c';ctx.lineWidth=1.2;
+      ctx.beginPath();let fe=true;
+      emaVals.forEach((v,i)=>{if(v==null)return;fe?(ctx.moveTo(xOf(i),yOf(v)),fe=false):ctx.lineTo(xOf(i),yOf(v));});ctx.stroke();
+    }
+  } else {
+    // Candlestick / OHLC
+    const cw = Math.max(1, iW/bars.length*0.6);
+    bars.forEach((b,i)=>{
+      const x=xOf(i), up=b.close>=b.open;
+      const col=up?'#3ddc97':'#ff6b81';
+      // wick
+      ctx.strokeStyle=col;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,yOf(b.high));ctx.lineTo(x,yOf(b.low));ctx.stroke();
+      if (chartType==='candle') {
+        ctx.fillStyle=up?'rgba(61,220,151,.8)':'rgba(255,107,129,.8)';
+        const top=Math.min(yOf(b.open),yOf(b.close));
+        const ht=Math.max(1,Math.abs(yOf(b.open)-yOf(b.close)));
+        ctx.fillRect(x-cw/2,top,cw,ht);
+      } else {
+        ctx.strokeStyle=col;ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x-cw/2,yOf(b.open));ctx.lineTo(x,yOf(b.open));ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x,yOf(b.close));ctx.lineTo(x+cw/2,yOf(b.close));ctx.stroke();
+      }
+    });
+    if (showSMA) {
+      ctx.strokeStyle='#ffc861';ctx.lineWidth=1.2;ctx.setLineDash([]);
+      ctx.beginPath();let first=true;
+      smaVals.forEach((v,i)=>{if(v==null)return;first?(ctx.moveTo(xOf(i),yOf(v)),first=false):ctx.lineTo(xOf(i),yOf(v));});ctx.stroke();
+    }
+    if (showEMA) {
+      ctx.strokeStyle='#fb923c';ctx.lineWidth=1.2;
+      ctx.beginPath();let fe=true;
+      emaVals.forEach((v,i)=>{if(v==null)return;fe?(ctx.moveTo(xOf(i),yOf(v)),fe=false):ctx.lineTo(xOf(i),yOf(v));});ctx.stroke();
+    }
+  }
+
+  // x-axis labels (sampled)
+  ctx.fillStyle='rgba(147,166,176,.7)';ctx.font=`10px ui-monospace`;ctx.textAlign='center';
+  const step=Math.ceil(bars.length/8);
+  bars.forEach((_,i)=>{if(i%step===0){ctx.fillText(labels[i],xOf(i),H-pad.b+14);}});
+
+  // legend
+  const lgd=[];
+  if(showSMA) lgd.push({c:'#ffc861',l:'SMA 20'});
+  if(showEMA) lgd.push({c:'#fb923c',l:'EMA 50'});
+  if(showBB)  lgd.push({c:'rgba(139,92,246,.7)',l:'BB(20,2)'});
+  let lx=pad.l;
+  lgd.forEach(({c,l})=>{
+    ctx.strokeStyle=c;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(lx,pad.t-6);ctx.lineTo(lx+20,pad.t-6);ctx.stroke();
+    ctx.fillStyle='rgba(147,166,176,.8)';ctx.textAlign='left';ctx.fillText(l,lx+24,pad.t-2);
+    lx+=ctx.measureText(l).width+44;
+  });
+
+  // -- volume chart --
+  const vc = $('volCanvas');
+  const vctx = vc.getContext('2d');
+  vc.width = vc.clientWidth*DPR; vc.height = 120*DPR;
+  vctx.scale(DPR,DPR);
+  const VW=vc.clientWidth, VH=120;
+  const vpad={t:8,r:10,b:24,l:60};
+  const viW=VW-vpad.l-vpad.r, viH=VH-vpad.t-vpad.b;
+  const maxVol=Math.max(...vols);
+  const bw=Math.max(1,viW/bars.length*0.8);
+  vctx.clearRect(0,0,VW,VH);
+  bars.forEach((b,i)=>{
+    const x=vpad.l+viW*(i/(bars.length-1||1));
+    const h=viH*(b.volume/maxVol);
+    const up=b.close>=b.open;
+    vctx.fillStyle=up?'rgba(61,220,151,.5)':'rgba(255,107,129,.5)';
+    vctx.fillRect(x-bw/2,vpad.t+viH-h,bw,h);
+  });
+  vctx.fillStyle='rgba(147,166,176,.6)';vctx.font='10px ui-monospace';vctx.textAlign='right';
+  vctx.fillText(fmtNum(maxVol),vpad.l-4,vpad.t+10);
+  vctx.fillText('0',vpad.l-4,vpad.t+viH);
+
+  // -- RSI chart --
+  const rc = $('rsiCanvas');
+  const rctx = rc.getContext('2d');
+  rc.width = rc.clientWidth*DPR; rc.height = 100*DPR;
+  rctx.scale(DPR,DPR);
+  const RW=rc.clientWidth, RH=100;
+  const rpad={t:8,r:10,b:20,l:60};
+  const riW=RW-rpad.l-rpad.r, riH=RH-rpad.t-rpad.b;
+  const rsiVals=rsiArr(closes);
+  rctx.clearRect(0,0,RW,RH);
+  // overbought / oversold
+  [[70,'rgba(255,107,129,.12)'],[30,'rgba(61,220,151,.12)']].forEach(([lvl,col])=>{
+    const y=rpad.t+riH*(1-lvl/100);
+    rctx.strokeStyle='rgba(255,255,255,.1)';rctx.lineWidth=1;rctx.setLineDash([3,3]);
+    rctx.beginPath();rctx.moveTo(rpad.l,y);rctx.lineTo(RW-rpad.r,y);rctx.stroke();
+    rctx.setLineDash([]);
+    rctx.fillStyle='rgba(147,166,176,.5)';rctx.font='9px ui-monospace';
+    rctx.textAlign='right';rctx.fillText(lvl,rpad.l-4,y+4);
+  });
+  rctx.strokeStyle='rgba(139,92,246,.8)';rctx.lineWidth=1.5;
+  rctx.beginPath();let rFirst=true;
+  rsiVals.forEach((v,i)=>{
+    if(v==null)return;
+    const x=rpad.l+riW*(i/(rsiVals.length-1||1));
+    const y=rpad.t+riH*(1-v/100);
+    rFirst?(rctx.moveTo(x,y),rFirst=false):rctx.lineTo(x,y);
+  });
+  rctx.stroke();
+  rctx.fillStyle='rgba(147,166,176,.6)';rctx.font='9px ui-monospace';rctx.textAlign='left';
+  rctx.fillText('RSI(14)',rpad.l+4,rpad.t+12);
+}
+
+/* ---- export ---- */
+function barsToCSV(bars, symbol, cols) {
+  const hdr = ['Date', cols.open?'Open':'', cols.high?'High':'', cols.low?'Low':'',
+    cols.close?'Close':'', cols.vol?'Volume':'', cols.adj?'AdjClose':'']
+    .filter(Boolean).join(',');
+  const rows = bars.map(b => [b.date,
+    cols.open?b.open:'', cols.high?b.high:'', cols.low?b.low:'',
+    cols.close?b.close:'', cols.vol?b.volume:'', cols.adj?b.adjClose??'':''
+  ].filter((_,i)=>[true,cols.open,cols.high,cols.low,cols.close,cols.vol,cols.adj][i]).join(','));
+  return hdr + '\n' + rows.join('\n');
+}
+function downloadFile(filename, content, mime='text/csv') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download = filename; a.click();
+}
+async function doExport() {
+  const fmt = $('expFmt').value;
+  const symVal = $('expSym').value;
+  const cols = {
+    open:$('expOpen').checked, high:$('expHigh').checked, low:$('expLow').checked,
+    close:$('expClose').checked, vol:$('expVol').checked, adj:$('expAdj').checked
+  };
+  const recs = symVal === 'all' ? await dbGetAll() : [await dbGet(symVal)].filter(Boolean);
+  if (!recs.length) { alert('Nothing to export.'); return; }
+
+  if (fmt === 'csv') {
+    recs.forEach(r => downloadFile(`${r.symbol}_1Y.csv`, barsToCSV(r.bars, r.symbol, cols)));
+  } else if (fmt === 'csv-combined') {
+    const lines = ['Symbol,Date,Open,High,Low,Close,Volume'];
+    recs.forEach(r => r.bars.forEach(b =>
+      lines.push(`${r.symbol},${b.date},${b.open},${b.high},${b.low},${b.close},${b.volume}`)
+    ));
+    downloadFile('all_symbols.csv', lines.join('\n'));
+  } else if (fmt === 'json') {
+    const obj = {};
+    recs.forEach(r=>obj[r.symbol]=r.bars);
+    downloadFile('market_data.json', JSON.stringify(obj, null, 2), 'application/json');
+  }
+}
+async function exportOne(sym) {
+  const rec = await dbGet(sym);
+  if (!rec) return;
+  downloadFile(`${sym}_1Y.csv`, barsToCSV(rec.bars, sym,
+    {open:true,high:true,low:true,close:true,vol:true,adj:true}));
+}
+async function exportAllCSV() {
+  const all = await dbGetAll();
+  all.forEach(r => downloadFile(`${r.symbol}_1Y.csv`,
+    barsToCSV(r.bars, r.symbol, {open:true,high:true,low:true,close:true,vol:true,adj:true})));
+}
+
+/* ---- incremental update ---- */
+async function runIncremental() {
+  const symVal = $('incrSym').value;
+  const recs = symVal === 'all' ? await dbGetAll() : [await dbGet(symVal)].filter(Boolean);
+  if (!recs.length) { alert('No stored symbols to update.'); return; }
+  // For each, download fresh then merge
+  for (const rec of recs) {
+    try {
+      const { bars } = await fetchWithFallback(rec.symbol, '1y', CFG.interval);
+      const existDates = new Set(rec.bars.map(b=>b.date));
+      const newBars = bars.filter(b=>!existDates.has(b.date));
+      if (!newBars.length) { log('inf', `${rec.symbol}: already up to date`); continue; }
+      const merged = [...rec.bars, ...newBars].sort((a,b)=>a.date.localeCompare(b.date));
+      await dbPut({...rec, bars:merged, meta:{...rec.meta, to:merged[merged.length-1].date, count:merged.length}});
+      log('ok', `${rec.symbol}: +${newBars.length} new bars`);
+    } catch(e) { log('er', `${rec.symbol} update failed: ${e.message}`); }
+  }
+  await refreshLibrary();
+}
+
+/* ---- validate ---- */
+async function validateAll() {
+  const all = await dbGetAll();
+  const rows = all.map(rec => {
+    const bars = rec.bars;
+    const issues = [];
+    if (bars.length < 10) issues.push('Too few bars');
+    bars.forEach((b,i) => {
+      if (b.close <= 0) issues.push(`Bar ${i}: non-positive close`);
+      if (b.high < b.low) issues.push(`Bar ${i}: high < low`);
+      if (i>0 && bars[i].date <= bars[i-1].date) issues.push(`Bar ${i}: date not ascending`);
+    });
+    const score = Math.max(0, 100 - issues.length * 10);
+    return { symbol: rec.symbol, bars: bars.length, issues: issues.length ? issues.slice(0,3).join('; ') : '✓ Clean', score };
+  });
+  $('valRows').innerHTML = rows.map(r =>
+    `<tr><td>${r.symbol}</td><td class="num">${r.bars}</td>
+     <td style="font-size:11px;color:${r.issues.startsWith('✓')?'var(--green)':'var(--amber)'}">${r.issues}</td>
+     <td class="num ${r.score===100?'pos':r.score<70?'neg':'warn'}">${r.score}</td></tr>`
+  ).join('') || '<tr><td colspan="4" class="hint" style="padding:12px">No data to validate</td></tr>';
+}
+
+/* ---- integration snippet ---- */
+async function genIntegration() {
+  const sym = $('intSym').value;
+  const label = $('intLabel').value || sym + ' 1Y Live';
+  if (!sym) { alert('Choose a symbol.'); return; }
+  const rec = await dbGet(sym);
+  if (!rec) { alert('Symbol not in library.'); return; }
+  const bars = rec.bars;
+  const snippet = `
+/* ──────────────────────────────────────────────────────────
+   FutuQuant DataHub → Strategy Lab integration
+   Symbol : ${sym}
+   Bars   : ${bars.length}
+   From   : ${bars[0]?.date}  To: ${bars[bars.length-1]?.date}
+   Paste this block inside <script> in FutuQuant-StrategyLab.html
+   then reload the page. The symbol will appear in the dataset dropdown.
+   ────────────────────────────────────────────────────────── */
+(function(){
+  const raw = ${JSON.stringify(bars.map(b=>({o:b.open,h:b.high,l:b.low,c:b.close,v:b.volume})))};
+  const bars = raw.map(b=>({open:b.o,high:b.h,low:b.l,close:b.c,volume:b.v}));
+  if (typeof DATASETS !== 'undefined') {
+    DATASETS['${sym.replace(/[^a-zA-Z0-9]/g,'_')}'] = {
+      label: '${label}',
+      gen: () => bars
+    };
+    // refresh selector if initSelectors() is available
+    if (typeof initSelectors === 'function') initSelectors();
+  }
+})();
+`.trim();
+  $('intCode').value = snippet;
+}
+
+function copySnippet() {
+  const t = $('intCode').value;
+  if (!t) return;
+  navigator.clipboard.writeText(t).then(()=>{
+    $('copyMsg').textContent = '✓ Copied!';
+    setTimeout(()=>$('copyMsg').textContent='', 2000);
+  });
+}
+
+/* ---- clear all ---- */
+async function clearAllData() {
+  if (!confirm('Delete ALL stored data? This cannot be undone.')) return;
+  const all = await dbGetAll();
+  for (const r of all) await dbDelete(r.symbol);
+  await refreshLibrary();
+  log('warn', 'All data cleared.');
+}
+
+function updateCountBadge() {
+  dbGetAll().then(all=>{ $('countBadge').textContent = `${all.length} symbols stored`; });
+}
+
+/* ---- tabs ---- */
+function switchTab(name) {
+  document.querySelectorAll('.tabcontent').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  $(`tab-${name}`).classList.add('active');
+  const tabs = ['download','library','preview','export'];
+  document.querySelectorAll('.tab')[tabs.indexOf(name)]?.classList.add('active');
+  if (name==='library') refreshLibrary();
+  if (name==='preview') {
+    const ps=$('prevSym');
+    if(ps.value) loadPreview();
+  }
+}
+
+/* ---- boot ---- */
+$('tickerBox').addEventListener('input', onTickerInput);
+// Set default date range for preview
+$('prevTo').value = today();
+$('prevFrom').value = daysAgo(365);
+
+openDB().then(async () => {
+  loadCfg();
+  await refreshLibrary();
+  log('ok', 'IndexedDB ready. Configure source and paste tickers to begin.');
+}).catch(e => {
+  $('storBadge').textContent = 'DB error';
+  $('storBadge').className = 'badge err';
+  log('er', 'IndexedDB failed: ' + e.message);
+});
+
+window.addEventListener('resize', () => {
+  if (previewData) {
+    const bars = previewData.bars.filter(b =>
+      (!$('prevFrom').value || b.date >= $('prevFrom').value) &&
+      (!$('prevTo').value   || b.date <= $('prevTo').value)
+    );
+    drawCharts(bars);
+  }
+});
+</script>
+</body>
+</html>
