@@ -1562,15 +1562,34 @@ function updateCountBadge() {
 let __labPending = null;      // payload queued until the iframe says it's booted
 let __labBooted = false;
 
+let __labUrl = null;
+function getLabHtml() {
+  const holder = document.getElementById('labB64');
+  if (!holder) return '';
+  const bytes = Uint8Array.from(atob(holder.textContent.trim()), c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
 function ensureLabFrame() {
   const f = $('labFrame');
-  if (!f.getAttribute('srcdoc')) {
-    const holder = document.getElementById('labB64');
-    if (holder) {
-      // decode base64 -> UTF-8 HTML, then load into the iframe
-      const bytes = Uint8Array.from(atob(holder.textContent.trim()), c => c.charCodeAt(0));
-      const htmlText = new TextDecoder('utf-8').decode(bytes);
+  if (f.dataset.loaded === '1') return f;
+  const htmlText = getLabHtml();
+  if (!htmlText) return f;
+  // Blob URL runs as a real same-origin document -> scripts execute even under file://
+  try {
+    if (__labUrl) URL.revokeObjectURL(__labUrl);
+    __labUrl = URL.createObjectURL(new Blob([htmlText], { type: 'text/html' }));
+    f.src = __labUrl;
+    f.dataset.loaded = '1';
+  } catch (e) {
+    // last-resort fallback: write directly into the iframe document
+    try {
+      const doc = f.contentDocument || f.contentWindow.document;
+      doc.open(); doc.write(htmlText); doc.close();
+      f.dataset.loaded = '1';
+    } catch (e2) {
+      // final fallback: srcdoc
       f.setAttribute('srcdoc', htmlText);
+      f.dataset.loaded = '1';
     }
   }
   return f;
