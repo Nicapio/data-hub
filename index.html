@@ -62,12 +62,6 @@ body{min-height:100vh;color:var(--text);
 .tab:hover:not(.active){color:var(--text)}
 .tabcontent{display:none}
 .tabcontent.active{display:block}
-/* Lab tab stays rendered at FULL SIZE when inactive (just moved off-screen) so its
-   iframe loads and lays out at correct dimensions, like a normal visible page */
-#tab-lab{display:block;position:fixed;left:0;top:0;width:100%;height:100%;
-  visibility:hidden;opacity:0;pointer-events:none;z-index:-1}
-#tab-lab.active{position:static;visibility:visible;opacity:1;
-  pointer-events:auto;z-index:auto;height:auto}
 
 /* ---- layout ---- */
 .page{padding:0 16px 20px;max-width:1700px;margin:0 auto}
@@ -1696,7 +1690,11 @@ function switchTab(name) {
     const ps=$('prevSym');
     if(ps.value) loadPreview();
   }
-  if (name==='lab') ensureLabFrame();
+  if (name==='lab') {
+    // load the iframe AFTER the tab is visibly displayed (fixes Chrome not running
+    // a page that loaded while its container was display:none)
+    requestAnimationFrame(() => requestAnimationFrame(() => ensureLabFrame()));
+  }
 }
 
 /* ---- boot ---- */
@@ -1705,8 +1703,7 @@ $('tickerBox').addEventListener('input', onTickerInput);
 $('prevTo').value = today();
 $('prevFrom').value = daysAgo(365);
 
-// load the Strategy Lab iframe immediately — independent of IndexedDB
-try { ensureLabFrame(); } catch(e){ setLabStatus('DIAG: ensureLabFrame threw — ' + e.message); }
+// (Strategy Lab iframe loads when you open its tab — see switchTab)
 
 openDB().then(async () => {
   loadCfg();
