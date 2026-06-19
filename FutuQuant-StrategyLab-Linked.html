@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FutuQuant Strategy Lab</title>
+<style>
+:root{
+  --abyss:#060d14; --deep:#0a1a22;
+  --glass:rgba(255,255,255,.055); --glass2:rgba(255,255,255,.085);
+  --edge:rgba(255,255,255,.13); --edge-soft:rgba(255,255,255,.07);
+  --text:#e8eef2; --dim:#93a6b0;
+  --aurora1:#2dd4bf; --aurora2:#34d399; --aurora3:#3b82f6; --aurora4:#8b5cf6;
+  --green:#3ddc97; --red:#ff6b81; --amber:#ffc861;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  --r:18px; --r-in:12px;
+}
+*{box-sizing:border-box;margin:0}
+html{scrollbar-color:rgba(255,255,255,.18) transparent}
+body{min-height:100vh;color:var(--text);
+  font:13px/1.55 "Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  background:linear-gradient(165deg,var(--abyss) 0%,var(--deep) 55%,#07131c 100%);
+  background-attachment:fixed}
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;
+  will-change:transform;mix-blend-mode:screen}
+.b1{width:55vw;height:55vw;left:-12vw;top:-18vh;
+  background:radial-gradient(circle at 35% 35%,var(--aurora1),transparent 65%);
+  animation:drift1 52s ease-in-out infinite alternate}
+.b2{width:48vw;height:48vw;right:-15vw;top:8vh;
+  background:radial-gradient(circle at 60% 40%,var(--aurora3),transparent 65%);
+  animation:drift2 64s ease-in-out infinite alternate}
+.b3{width:42vw;height:42vw;left:22vw;bottom:-22vh;
+  background:radial-gradient(circle at 50% 50%,var(--aurora2),transparent 62%);
+  animation:drift3 58s ease-in-out infinite alternate}
+@keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(9vw,7vh) scale(1.12)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1.05)}to{transform:translate(-8vw,10vh) scale(.95)}}
+@keyframes drift3{from{transform:translate(0,0) rotate(0)}to{transform:translate(6vw,-8vh) rotate(18deg)}}
+@media(prefers-reduced-motion:reduce){.blob{animation:none}}
+.top{display:flex;align-items:center;gap:12px;padding:12px 18px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:5;background:rgba(8,17,24,.55);
+  backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+  border-bottom:1px solid var(--edge-soft)}
+.brand{font-size:17px;font-weight:700;letter-spacing:.02em}
+.brand b{background:linear-gradient(90deg,var(--aurora1),var(--aurora3));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--edge);color:var(--dim);background:var(--glass)}
+.badge.yes{color:var(--green);border-color:rgba(61,220,151,.4)}
+.badge.no{color:var(--dim)}
+.grow{flex:1}
+.layout{display:grid;gap:14px;padding:16px;max-width:1600px;margin:0 auto;
+  grid-template-columns:300px 1fr 360px}
+@media(max-width:1250px){.layout{grid-template-columns:280px 1fr}.right{grid-column:1/-1}}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.panel{position:relative;border-radius:var(--r);overflow:hidden;background:var(--glass);
+  backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);
+  border:1px solid var(--edge);
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10)}
+.panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);
+  padding:11px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  border-bottom:1px solid var(--edge-soft)}
+.body{padding:12px 14px}
+.col{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stack>*+*{margin-top:14px}
+label{font-size:11px;color:var(--dim);letter-spacing:.04em;display:block;margin-bottom:3px}
+input,select,textarea{width:100%;border-radius:10px;padding:7px 10px;font-size:12px;
+  font-family:var(--mono);color:var(--text);
+  background:rgba(0,0,0,.25);border:1px solid var(--edge)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--aurora1);
+  box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+select option{background:#0c1a22;color:var(--text)}
+textarea{resize:vertical;min-height:70px}
+button{border-radius:999px;padding:6px 14px;font-size:12px;cursor:pointer;
+  color:var(--text);background:var(--glass2);border:1px solid var(--edge);transition:all .2s}
+button:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.12)}
+button.primary{border:none;color:#04211c;font-weight:600;
+  background:linear-gradient(120deg,var(--aurora1),var(--aurora2));
+  box-shadow:0 6px 18px -6px rgba(45,212,191,.55)}
+button.primary:hover{filter:brightness(1.08)}
+button.sm{padding:3px 10px;font-size:11px}
+button:focus-visible{outline:2px solid var(--aurora1);outline-offset:2px}
+.param{display:grid;grid-template-columns:1fr 86px;gap:8px;align-items:center}
+.param label{margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px}
+.kpi{border-radius:var(--r-in);padding:9px 11px;background:var(--glass2);
+  border:1px solid var(--edge-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.kpi .l{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.kpi .v{font-family:var(--mono);font-size:16px;margin-top:3px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{text-align:left;color:var(--dim);font-weight:500;padding:5px 8px;white-space:nowrap;
+  border-bottom:1px solid var(--edge-soft);letter-spacing:.04em;position:sticky;top:0;
+  background:rgba(10,20,28,.9)}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.045)}
+tbody tr:hover{background:rgba(255,255,255,.04)}
+.num{text-align:right}.pos{color:var(--green)}.neg{color:var(--red)}
+.best td{background:rgba(61,220,151,.08)}
+.scroll{max-height:420px;overflow:auto;border-radius:var(--r-in)}
+.signal{border-radius:var(--r-in);padding:10px 12px;font-family:var(--mono);font-size:12px;
+  background:rgba(0,0,0,.22);border:1px solid var(--edge-soft);white-space:pre-wrap}
+.hint{color:var(--dim);font-size:11px}
+.reason{white-space:normal;color:var(--dim);font-size:11px;max-width:340px}
+canvas{width:100%;border-radius:var(--r-in);background:rgba(0,0,0,.22);
+  border:1px solid var(--edge-soft)}
+details summary{cursor:pointer;color:var(--dim);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;padding:4px 0}
+.hidden{display:none}
+a{color:var(--aurora1)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<div class="top">
+  <div class="brand">FutuQuant <b>Strategy Lab</b></div>
+  <span class="badge">offline research tool · paper logic only</span>
+  <span id="sigBadge" class="badge no">SIGNAL: —</span>
+  <div class="grow"></div>
+  <button class="sm" onclick="resetSettings()">Reset settings</button>
+</div>
+
+<div class="layout">
+
+  <!-- ============ LEFT: controls ============ -->
+  <div class="col left">
+    <div class="panel"><h2>1 · Entry strategy</h2><div class="body stack">
+      <div><label for="stratSel">Strategy</label>
+        <select id="stratSel" onchange="onStrategyChange()"></select>
+        <div class="hint" id="stratDesc" style="margin-top:6px"></div></div>
+      <div id="stratParams" class="col"></div>
+    </div></div>
+
+    <div class="panel"><h2>2 · Exit model <span class="hint">(independent)</span></h2><div class="body stack">
+      <div><label for="exitSel">Exit rules</label>
+        <select id="exitSel" onchange="onExitChange()"></select>
+        <div class="hint" id="exitDesc" style="margin-top:6px"></div></div>
+      <div id="exitParams" class="col"></div>
+    </div></div>
+
+    <div class="panel"><h2>3 · Data</h2><div class="body stack">
+      <div><label for="dataSel">Sample dataset</label>
+        <select id="dataSel" onchange="onDataChange()"></select></div>
+      <details><summary>Paste your own data (CSV)</summary>
+        <div class="col" style="margin-top:8px">
+          <textarea id="csvBox" placeholder="open,high,low,close,volume — one bar per line (a leading date column is fine)"></textarea>
+          <div class="row"><button class="sm" onclick="loadCSV()">Use this data</button>
+            <span id="csvMsg" class="hint"></span></div>
+        </div></details>
+    </div></div>
+
+    <div class="panel"><h2>4 · Run</h2><div class="body col">
+      <button class="primary" onclick="runNow()">Run backtest</button>
+      <button onclick="runCompare()">Compare all 5 strategies</button>
+      <div class="row">
+        <select id="optObjective" style="flex:1">
+          <option value="totalReturnPct">optimize: total return</option>
+          <option value="profitFactor">optimize: profit factor</option>
+          <option value="winRate">optimize: win rate</option>
+        </select>
+        <button onclick="runOptimize()">Optimize</button>
+      </div>
+      <div class="hint">Parameters re-run the backtest instantly as you change them. Settings save automatically.</div>
+    </div></div>
+  </div>
+
+  <!-- ============ CENTER: results ============ -->
+  <div class="col center">
+    <div class="panel"><h2>Latest-bar signal</h2><div class="body">
+      <div class="signal" id="signalBox">Run a backtest to see the live entry signal and its reasoning.</div>
+    </div></div>
+
+    <div class="panel"><h2>Trades <span id="tradeCount" class="badge">0</span></h2>
+      <div class="body"><div class="scroll"><table>
+        <thead><tr><th>#</th><th class="num">Entry bar</th><th class="num">Exit bar</th>
+        <th class="num">Bars</th><th class="num">Entry</th><th class="num">Exit</th>
+        <th class="num">Size</th><th class="num">Return</th><th>Why in / why out</th></tr></thead>
+        <tbody id="tradeRows"></tbody></table></div></div>
+    </div>
+
+    <div class="panel" id="comparePanel" style="display:none"><h2>Strategy comparison
+      <span class="hint">same dataset · same exit model · best highlighted</span></h2>
+      <div class="body"><div class="scroll"><table>
+        <thead><tr><th>Strategy</th><th class="num">Return</th><th class="num">Trades</th>
+        <th class="num">Win rate</th><th class="num">Profit factor</th><th class="num">Max DD</th></tr></thead>
+        <tbody id="compareRows"></tbody></table></div></div>
+    </div>
+
+    <div class="panel" id="optPanel" style="display:none"><h2>Optimization results
+      <span id="optInfo" class="hint"></span></h2>
+      <div class="body"><div class="scroll"><table>
+        <thead><tr><th>#</th><th class="num">Return</th><th class="num">Win rate</th>
+        <th class="num">PF</th><th class="num">Max DD</th><th>Parameters</th><th></th></tr></thead>
+        <tbody id="optRows"></tbody></table></div></div>
+    </div>
+  </div>
+
+  <!-- ============ RIGHT: performance ============ -->
+  <div class="col right">
+    <div class="panel"><h2>Performance</h2><div class="body kpis" id="metrics"></div></div>
+    <div class="panel"><h2>Equity curve <span class="hint" id="curveLegend"></span></h2>
+      <div class="body"><canvas id="curve" height="220"></canvas></div></div>
+    <div class="panel"><h2>Event log</h2><div class="body">
+      <div class="scroll" style="max-height:260px"><table>
+        <thead><tr><th class="num">Bar</th><th>Event</th></tr></thead>
+        <tbody id="eventRows"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= FutuQuant Strategy Lab — core engine =================
+   Pure logic, no DOM. Everything deterministic (seeded data, no Math.random).
+   Architecture:
+     IND        technical indicators
+     DATASETS   seeded synthetic OHLCV generators (offline sample data)
+     STRATEGIES entry-signal modules   entry(bars, P) -> {signal, reason}
+     EXITS      exit-rule modules      evaluate(pos, bar, ctx, P) -> decision(s)
+     runBacktest / compareAll / optimize
+   Exit models are fully decoupled: any exit works with any strategy.
+========================================================================== */
+
+/* ---------- indicators ---------- */
+const IND = {
+  sma(c, p) { if (!p || c.length < p) return NaN;
+    let s = 0; for (let i = c.length - p; i < c.length; i++) s += c[i];
+    return s / p; },
+  ema(c, p) { if (!p || c.length < p) return NaN;
+    const k = 2 / (p + 1);
+    let e = 0; for (let i = 0; i < p; i++) e += c[i]; e /= p;
+    for (let i = p; i < c.length; i++) e = c[i] * k + e * (1 - k);
+    return e; },
+  rsi(c, p = 14) { if (c.length <= p) return NaN;
+    let g = 0, l = 0;
+    for (let i = 1; i <= p; i++) { const d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; }
+    g /= p; l /= p;
+    for (let i = p + 1; i < c.length; i++) {
+      const d = c[i] - c[i - 1];
+      g = (g * (p - 1) + Math.max(d, 0)) / p;
+      l = (l * (p - 1) + Math.max(-d, 0)) / p; }
+    if (l === 0) return 100;
+    return 100 - 100 / (1 + g / l); },
+  atr(h, l, c, p = 14) { if (c.length <= p) return NaN;
+    const trs = [];
+    for (let i = 1; i < c.length; i++)
+      trs.push(Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1])));
+    let a = 0; for (let i = 0; i < p; i++) a += trs[i]; a /= p;
+    for (let i = p; i < trs.length; i++) a = (a * (p - 1) + trs[i]) / p;
+    return a; },
+  highest(arr, n, excludeLast = true) {
+    const end = excludeLast ? arr.length - 1 : arr.length;
+    const start = Math.max(0, end - n);
+    if (end - start < 1) return NaN;
+    let m = -Infinity; for (let i = start; i < end; i++) if (arr[i] > m) m = arr[i];
+    return m; },
+  roc(c, p) { if (c.length <= p) return NaN;                 // rate of change %
+    const prev = c[c.length - 1 - p];
+    return prev > 0 ? (c[c.length - 1] / prev - 1) * 100 : NaN; },
+  volRatio(v, lb = 20) { if (v.length <= lb) return NaN;
+    let s = 0; for (let i = v.length - 1 - lb; i < v.length - 1; i++) s += v[i];
+    const avg = s / lb;
+    return avg > 0 ? v[v.length - 1] / avg : NaN; },
+};
+
+/* ---------- deterministic sample datasets ---------- */
+function mulberry32(a) { return function () {
+  a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(rng) { let u = 0, v = 0;
+  while (u === 0) u = rng(); while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+function genSeries(seed, n, segments) {
+  // segments: [{len, drift, vol}] proportions of n
+  const rng = mulberry32(seed);
+  let price = 100;
+  const out = [];
+  const total = segments.reduce((a, s) => a + s.len, 0);
+  for (const seg of segments) {
+    const bars = Math.round(n * seg.len / total);
+    for (let i = 0; i < bars; i++) {
+      const o = price;
+      const c = Math.max(1, o * (1 + seg.drift + gauss(rng) * seg.vol));
+      const hi = Math.max(o, c) * (1 + Math.abs(gauss(rng)) * seg.vol * 0.4);
+      const lo = Math.min(o, c) * (1 - Math.abs(gauss(rng)) * seg.vol * 0.4);
+      const baseVol = 1e6, spike = rng() < 0.07 ? 2 + rng() * 2 : 1;
+      out.push({ open: o, high: hi, low: lo, close: c,
+                 volume: Math.round(baseVol * (0.6 + rng() * 0.8) * spike) });
+      price = c;
+    }
+  }
+  return out;
+}
+
+const DATASETS = {
+  uptrend:  { label: "Steady Uptrend (500 bars)",
+    gen: () => genSeries(11, 500, [{ len: 1, drift: 0.0011, vol: 0.013 }]) },
+  choppy:   { label: "Choppy Range (500 bars)",
+    gen: () => genSeries(22, 500, [
+      { len: 1, drift: 0.0012, vol: 0.014 }, { len: 1, drift: -0.0012, vol: 0.014 },
+      { len: 1, drift: 0.0012, vol: 0.014 }, { len: 1, drift: -0.0012, vol: 0.014 }]) },
+  volatile: { label: "Volatile Growth (500 bars)",
+    gen: () => genSeries(33, 500, [{ len: 1, drift: 0.0013, vol: 0.026 }]) },
+  crash:    { label: "Bull → Crash → Recovery (500 bars)",
+    gen: () => genSeries(44, 500, [
+      { len: 2, drift: 0.0015, vol: 0.012 }, { len: 1, drift: -0.004, vol: 0.03 },
+      { len: 2, drift: 0.0018, vol: 0.016 }]) },
+  bear:     { label: "Grinding Bear (500 bars)",
+    gen: () => genSeries(55, 500, [{ len: 1, drift: -0.0008, vol: 0.015 }]) },
+};
+
+/* ---------- parameter metadata helper (drives the dynamic forms) ---------- */
+function P(label, def, min, max, step) { return { label, def, min, max, step }; }
+function clampParams(meta, params) {
+  const out = {};
+  for (const k in meta) {
+    let v = Number(params?.[k]);
+    if (!isFinite(v)) v = meta[k].def;
+    out[k] = Math.min(meta[k].max, Math.max(meta[k].min, v));
+  }
+  return out;
+}
+
+/* ---------- bars view ---------- */
+function slice(data, i) {  // arrays up to and including bar i
+  return {
+    o: data.slice(0, i + 1).map(b => b.open),
+    h: data.slice(0, i + 1).map(b => b.high),
+    l: data.slice(0, i + 1).map(b => b.low),
+    c: data.slice(0, i + 1).map(b => b.close),
+    v: data.slice(0, i + 1).map(b => b.volume),
+  };
+}
+
+/* ================= STRATEGIES (entry signals only) ================= */
+const STRATEGIES = {
+  trend_following: {
+    label: "Trend Following",
+    desc: "Buy when price is above its moving average or breaks above recent resistance.",
+    params: {
+      ma_len: P("Moving average length", 50, 5, 200, 1),
+      breakout_len: P("Resistance lookback (bars)", 20, 5, 100, 1),
+    },
+    entry(bars, p) {
+      const price = bars.c[bars.c.length - 1];
+      const ma = IND.sma(bars.c, p.ma_len);
+      const res = IND.highest(bars.h, p.breakout_len);
+      if (!isFinite(ma) || !isFinite(res)) return { signal: false, reason: "warming up" };
+      if (price > res) return { signal: true,
+        reason: `breakout: close ${price.toFixed(2)} > ${p.breakout_len}-bar resistance ${res.toFixed(2)}` };
+      if (price > ma) return { signal: true,
+        reason: `trend: close ${price.toFixed(2)} > SMA${p.ma_len} ${ma.toFixed(2)}` };
+      return { signal: false, reason: `close ${price.toFixed(2)} below SMA${p.ma_len} ${ma.toFixed(2)} and below resistance` };
+    },
+  },
+
+  mean_reversion: {
+    label: "Mean Reversion",
+    desc: "Buy oversold dips (RSI below threshold), expecting a snap back toward the average.",
+    params: {
+      rsi_len: P("RSI length", 14, 2, 50, 1),
+      oversold: P("Oversold threshold", 30, 5, 50, 1),
+    },
+    entry(bars, p) {
+      const r = IND.rsi(bars.c, p.rsi_len);
+      if (!isFinite(r)) return { signal: false, reason: "warming up" };
+      if (r < p.oversold) return { signal: true,
+        reason: `RSI${p.rsi_len} = ${r.toFixed(1)} < ${p.oversold}: oversold, buying the dip` };
+      return { signal: false, reason: `RSI${p.rsi_len} = ${r.toFixed(1)} not oversold (need < ${p.oversold})` };
+    },
+  },
+
+  breakout: {
+    label: "Breakout + Volume",
+    desc: "Buy resistance breaks confirmed by above-average volume.",
+    params: {
+      res_len: P("Resistance lookback (bars)", 20, 5, 100, 1),
+      vol_mult: P("Volume ≥ × average", 1.5, 1, 4, 0.1),
+      vol_len: P("Volume average length", 20, 5, 60, 1),
+    },
+    entry(bars, p) {
+      const price = bars.c[bars.c.length - 1];
+      const res = IND.highest(bars.h, p.res_len);
+      const vr = IND.volRatio(bars.v, p.vol_len);
+      if (!isFinite(res) || !isFinite(vr)) return { signal: false, reason: "warming up" };
+      if (price > res && vr >= p.vol_mult) return { signal: true,
+        reason: `breakout ${price.toFixed(2)} > ${res.toFixed(2)} on ${vr.toFixed(1)}× volume` };
+      if (price > res) return { signal: false,
+        reason: `price broke ${res.toFixed(2)} but volume only ${vr.toFixed(1)}× (need ≥ ${p.vol_mult}×)` };
+      return { signal: false, reason: `no breakout: close ${price.toFixed(2)} ≤ resistance ${res.toFixed(2)}` };
+    },
+  },
+
+  scalping: {
+    label: "Scalping (momentum spike)",
+    desc: "Buy short-term momentum bursts; designed for tight, fast exits.",
+    params: {
+      mom_len: P("Momentum lookback (bars)", 3, 1, 10, 1),
+      mom_pct: P("Min momentum %", 1.0, 0.2, 5, 0.1),
+      vol_mult: P("Volume ≥ × average", 1.2, 1, 4, 0.1),
+    },
+    entry(bars, p) {
+      const m = IND.roc(bars.c, p.mom_len);
+      const vr = IND.volRatio(bars.v, 20);
+      if (!isFinite(m) || !isFinite(vr)) return { signal: false, reason: "warming up" };
+      if (m >= p.mom_pct && vr >= p.vol_mult) return { signal: true,
+        reason: `momentum +${m.toFixed(2)}% over ${p.mom_len} bars on ${vr.toFixed(1)}× volume` };
+      return { signal: false,
+        reason: `momentum ${m.toFixed(2)}% / volume ${vr.toFixed(1)}× (need ≥ ${p.mom_pct}% and ${p.vol_mult}×)` };
+    },
+  },
+
+  hybrid: {
+    label: "Hybrid (trend + volatility filter)",
+    desc: "Trend entries taken only when momentum confirms and volatility is calm enough.",
+    params: {
+      ma_len: P("Moving average length", 50, 5, 200, 1),
+      rsi_min: P("RSI must exceed", 50, 30, 70, 1),
+      atr_max_pct: P("Max ATR as % of price", 4, 0.5, 10, 0.1),
+    },
+    entry(bars, p) {
+      const price = bars.c[bars.c.length - 1];
+      const ma = IND.sma(bars.c, p.ma_len);
+      const r = IND.rsi(bars.c, 14);
+      const a = IND.atr(bars.h, bars.l, bars.c, 14);
+      if (![ma, r, a].every(isFinite)) return { signal: false, reason: "warming up" };
+      const atrPct = a / price * 100;
+      const checks = [
+        [price > ma, `price > SMA${p.ma_len} (${ma.toFixed(2)})`],
+        [r > p.rsi_min, `RSI ${r.toFixed(0)} > ${p.rsi_min}`],
+        [atrPct <= p.atr_max_pct, `ATR ${atrPct.toFixed(1)}% ≤ ${p.atr_max_pct}% (volatility filter)`],
+      ];
+      const failed = checks.filter(c => !c[0]);
+      if (!failed.length) return { signal: true,
+        reason: "all filters pass: " + checks.map(c => c[1]).join("; ") };
+      return { signal: false, reason: "blocked by: " + failed.map(c => c[1]).join("; ") };
+    },
+  },
+};
+
+/* ================= EXIT MODELS (independent, reusable) =================
+   evaluate(pos, bar, ctx, p) is called once per bar while in a position.
+   pos: {entry, frac (remaining 0..1), stop, target, trailHigh, tiersDone}
+   bar: current OHLC bar. ctx: history arrays incl. current bar.
+   Returns an array of events:
+     {type:"SELL", frac, price, reason} | {type:"MOVE_STOP", stop, reason}
+   Intrabar logic: stop checked against low (fills at stop price),
+   targets checked against high (fills at target price). Stop has priority. */
+const EXITS = {
+  fixed_target: {
+    label: "A · Fixed Target",
+    desc: "Sell everything at +target %. A stop-loss protects the downside.",
+    params: {
+      target_pct: P("Take-profit %", 10, 1, 100, 0.5),
+      stop_loss_pct: P("Stop-loss %", 5, 0.5, 50, 0.5),
+    },
+    init(pos, p) {
+      pos.stop = pos.entry * (1 - p.stop_loss_pct / 100);
+      pos.target = pos.entry * (1 + p.target_pct / 100);
+    },
+    evaluate(pos, bar, ctx, p) {
+      if (bar.low <= pos.stop) return [{ type: "SELL", frac: pos.frac, price: pos.stop,
+        reason: `stop-loss -${p.stop_loss_pct}% hit at ${pos.stop.toFixed(2)}` }];
+      if (bar.high >= pos.target) return [{ type: "SELL", frac: pos.frac, price: pos.target,
+        reason: `target +${p.target_pct}% hit at ${pos.target.toFixed(2)}` }];
+      return [];
+    },
+  },
+
+  scale_out: {
+    label: "B · Scale-Out",
+    desc: "Sell in tiers as profit grows; stop moves to break-even after tier 1.",
+    params: {
+      t1_gain: P("Tier 1 at +%", 5, 1, 50, 0.5),
+      t1_pct: P("Tier 1 sell %", 30, 5, 90, 5),
+      t2_gain: P("Tier 2 at +%", 10, 2, 80, 0.5),
+      t2_pct: P("Tier 2 sell %", 30, 5, 90, 5),
+      t3_gain: P("Final tier at +%", 20, 3, 200, 0.5),
+      initial_stop_pct: P("Initial stop-loss %", 6, 0.5, 50, 0.5),
+    },
+    init(pos, p) { pos.stop = pos.entry * (1 - p.initial_stop_pct / 100); pos.tiersDone = 0; },
+    evaluate(pos, bar, ctx, p) {
+      const ev = [];
+      if (bar.low <= pos.stop) {
+        const f = pos.frac; pos.frac = 0;
+        ev.push({ type: "SELL", frac: f, price: pos.stop,
+          reason: `stop hit at ${pos.stop.toFixed(2)} (tier ${pos.tiersDone})` });
+        return ev; }
+      const tiers = [
+        { gain: p.t1_gain, frac: p.t1_pct / 100 },
+        { gain: p.t2_gain, frac: p.t2_pct / 100 },
+        { gain: p.t3_gain, frac: 1 },                       // remainder
+      ];
+      while (pos.tiersDone < tiers.length) {
+        const t = tiers[pos.tiersDone];
+        const px = pos.entry * (1 + t.gain / 100);
+        if (bar.high < px) break;
+        const sellFrac = pos.tiersDone === 2 ? pos.frac : Math.min(t.frac, pos.frac);
+        ev.push({ type: "SELL", frac: sellFrac, price: px,
+          reason: `tier ${pos.tiersDone + 1}: +${t.gain}% reached, selling ${(sellFrac * 100).toFixed(0)}% at ${px.toFixed(2)}` });
+        pos.frac -= sellFrac;
+        pos.tiersDone++;
+        if (pos.tiersDone === 1 && pos.stop < pos.entry) {
+          pos.stop = pos.entry;
+          ev.push({ type: "MOVE_STOP", stop: pos.entry,
+            reason: "tier 1 banked → stop moved to break-even" });
+        }
+        if (pos.frac <= 1e-9) break;
+      }
+      return ev;
+    },
+  },
+
+  trailing: {
+    label: "C · Trailing Stop",
+    desc: "Stop follows the highest price reached at a fixed distance. It never moves down.",
+    params: {
+      trail_pct: P("Trail distance %", 8, 1, 40, 0.5),
+      initial_stop_pct: P("Initial stop-loss %", 8, 0.5, 50, 0.5),
+    },
+    init(pos, p) { pos.stop = pos.entry * (1 - p.initial_stop_pct / 100); pos.trailHigh = pos.entry; },
+    evaluate(pos, bar, ctx, p) {
+      const ev = [];
+      if (bar.low <= pos.stop)
+        return [{ type: "SELL", frac: pos.frac, price: pos.stop,
+          reason: `trailing stop hit at ${pos.stop.toFixed(2)} (high was ${pos.trailHigh.toFixed(2)})` }];
+      if (bar.high > pos.trailHigh) {
+        pos.trailHigh = bar.high;
+        const ns = pos.trailHigh * (1 - p.trail_pct / 100);
+        if (ns > pos.stop) { pos.stop = ns;                   // never moves down
+          ev.push({ type: "MOVE_STOP", stop: ns,
+            reason: `new high ${pos.trailHigh.toFixed(2)} → stop raised to ${ns.toFixed(2)}` }); }
+      }
+      return ev;
+    },
+  },
+
+  break_even: {
+    label: "D · Break-Even Protection",
+    desc: "After +trigger %, the stop jumps to entry (plus optional lock-in). Optional target.",
+    params: {
+      trigger_pct: P("Trigger at +%", 5, 0.5, 50, 0.5),
+      lock_in_pct: P("Lock in minimum +%", 0, 0, 30, 0.5),
+      initial_stop_pct: P("Initial stop-loss %", 5, 0.5, 50, 0.5),
+      target_pct: P("Optional target % (0 = none)", 0, 0, 200, 0.5),
+    },
+    init(pos, p) { pos.stop = pos.entry * (1 - p.initial_stop_pct / 100); pos.beDone = false; },
+    evaluate(pos, bar, ctx, p) {
+      const ev = [];
+      if (bar.low <= pos.stop)
+        return [{ type: "SELL", frac: pos.frac, price: pos.stop,
+          reason: `stop hit at ${pos.stop.toFixed(2)}${pos.beDone ? " (protected)" : ""}` }];
+      if (p.target_pct > 0 && bar.high >= pos.entry * (1 + p.target_pct / 100)) {
+        const px = pos.entry * (1 + p.target_pct / 100);
+        return [{ type: "SELL", frac: pos.frac, price: px,
+          reason: `target +${p.target_pct}% hit at ${px.toFixed(2)}` }]; }
+      if (!pos.beDone && bar.high >= pos.entry * (1 + p.trigger_pct / 100)) {
+        pos.beDone = true;
+        const ns = pos.entry * (1 + p.lock_in_pct / 100);
+        if (ns > pos.stop) { pos.stop = ns;
+          ev.push({ type: "MOVE_STOP", stop: ns, reason:
+            `+${p.trigger_pct}% reached → stop to ${p.lock_in_pct > 0 ? "entry +" + p.lock_in_pct + "%" : "break-even"} (${ns.toFixed(2)})` }); }
+      }
+      return ev;
+    },
+  },
+
+  atr_exit: {
+    label: "E · ATR Volatility Exit",
+    desc: "Stop and target sized by current volatility (ATR multiples). Adapts to the market.",
+    params: {
+      atr_len: P("ATR length", 14, 5, 50, 1),
+      stop_mult: P("Stop = entry − ×ATR", 2, 0.5, 8, 0.1),
+      target_mult: P("Target = entry + ×ATR", 4, 0.5, 16, 0.1),
+    },
+    init(pos, p, ctx) {
+      const a = IND.atr(ctx.h, ctx.l, ctx.c, p.atr_len);
+      const fallback = pos.entry * 0.02;
+      const atr = isFinite(a) && a > 0 ? a : fallback;
+      pos.stop = pos.entry - p.stop_mult * atr;
+      pos.target = pos.entry + p.target_mult * atr;
+      pos.atrUsed = atr;
+    },
+    evaluate(pos, bar, ctx, p) {
+      if (bar.low <= pos.stop) return [{ type: "SELL", frac: pos.frac, price: pos.stop,
+        reason: `ATR stop hit at ${pos.stop.toFixed(2)} (entry − ${p.stop_mult}×ATR ${pos.atrUsed.toFixed(2)})` }];
+      if (bar.high >= pos.target) return [{ type: "SELL", frac: pos.frac, price: pos.target,
+        reason: `ATR target hit at ${pos.target.toFixed(2)} (entry + ${p.target_mult}×ATR)` }];
+      return [];
+    },
+  },
+};
+
+/* ================= BACKTEST ENGINE =================
+   Candle-by-candle. Long-only, one position at a time, full equity per trade.
+   Entry: when flat and strategy signals on a bar's close, buy at that close.
+   Exit: exit model runs every bar while in a position (intrabar stop/target fills).
+   Deterministic; bounded; never throws on bad input (returns {error}).      */
+function runBacktest(data, stratKey, sParams, exitKey, eParams, opts = {}) {
+  try {
+    if (!Array.isArray(data) || data.length < 30)
+      return { error: "dataset too small (need ≥ 30 bars)" };
+    const strat = STRATEGIES[stratKey], exit = EXITS[exitKey];
+    if (!strat || !exit) return { error: "unknown strategy or exit model" };
+    const sp = clampParams(strat.params, sParams);
+    const ep = clampParams(exit.params, eParams);
+    const warmup = Math.min(Math.max(30, opts.warmup ?? 60), data.length - 5);
+
+    let equity = 1.0;                       // normalized; trades use full equity
+    let pos = null;                         // {entry, entryIdx, frac, stop, ...}
+    const equityCurve = [];
+    const trades = [];                      // every SELL event
+    const events = [];                      // full narrated log
+    let lastSignal = { signal: false, reason: "no data" };
+
+    for (let i = warmup; i < data.length; i++) {
+      const bar = data[i];
+      const ctx = slice(data, i);
+
+      if (pos) {
+        const evs = exit.evaluate(pos, bar, ctx, ep) || [];
+        for (const e of evs) {
+          if (e.type === "MOVE_STOP") {
+            events.push({ bar: i, kind: "MOVE_STOP", text: e.reason });
+          } else if (e.type === "SELL" && e.frac > 1e-9) {
+            const retPct = (e.price / pos.entry - 1) * 100;
+            equity *= 1 + (e.price / pos.entry - 1) * e.frac / pos.entryFrac;
+            trades.push({
+              entryIdx: pos.entryIdx, exitIdx: i,
+              entry: pos.entry, exit: e.price,
+              frac: e.frac, retPct,
+              bars: i - pos.entryIdx,
+              entryReason: pos.entryReason, exitReason: e.reason,
+              full: e.frac >= (pos.frac + e.frac) - 1e-9 ? false : false,
+            });
+            events.push({ bar: i, kind: retPct >= 0 ? "SELL+" : "SELL-",
+              text: `sell ${(e.frac * 100).toFixed(0)}% at ${e.price.toFixed(2)} (${retPct >= 0 ? "+" : ""}${retPct.toFixed(1)}%) — ${e.reason}` });
+            if (e.type === "SELL" && exit !== EXITS.scale_out) pos.frac -= e.frac;
+            // (scale_out already decremented pos.frac inside evaluate)
+          }
+        }
+        if (pos && pos.frac <= 1e-9) pos = null;
+      } else {
+        const sig = strat.entry(ctx, sp);
+        if (sig.signal) {
+          pos = { entry: bar.close, entryIdx: i, frac: 1, entryFrac: 1,
+                  entryReason: sig.reason };
+          exit.init?.(pos, ep, ctx);
+          events.push({ bar: i, kind: "BUY",
+            text: `buy at ${bar.close.toFixed(2)} — ${sig.reason}` });
+        }
+      }
+      // mark-to-market
+      const mtm = pos ? equity * (1 + (bar.close / pos.entry - 1) * pos.frac / pos.entryFrac)
+                      : equity;
+      equityCurve.push(mtm);
+      if (i === data.length - 1) lastSignal = pos
+        ? { signal: false, reason: "in position — exit model managing it" }
+        : strat.entry(ctx, sp);
+    }
+    // force-close at end (marked to market) for honest metrics
+    if (pos && pos.frac > 1e-9) {
+      const last = data[data.length - 1];
+      const retPct = (last.close / pos.entry - 1) * 100;
+      equity *= 1 + (last.close / pos.entry - 1) * pos.frac / pos.entryFrac;
+      trades.push({ entryIdx: pos.entryIdx, exitIdx: data.length - 1,
+        entry: pos.entry, exit: last.close, frac: pos.frac, retPct,
+        bars: data.length - 1 - pos.entryIdx,
+        entryReason: pos.entryReason, exitReason: "end of data (marked to market)" });
+      equityCurve[equityCurve.length - 1] = equity;
+    }
+    return { trades, equityCurve, metrics: computeMetrics(trades, equityCurve),
+             events, lastSignal, sp, ep };
+  } catch (err) {
+    return { error: "backtest error: " + (err && err.message || err) };
+  }
+}
+
+function computeMetrics(trades, curve) {
+  const rets = trades.map(t => t.retPct * t.frac);          // equity-weighted
+  const wins = rets.filter(r => r > 0), losses = rets.filter(r => r < 0);
+  const gw = wins.reduce((a, b) => a + b, 0), gl = -losses.reduce((a, b) => a + b, 0);
+  let peak = -Infinity, dd = 0;
+  for (const v of curve) { if (v > peak) peak = v;
+    if (peak > 0) dd = Math.max(dd, (peak - v) / peak); }
+  const final = curve.length ? curve[curve.length - 1] : 1;
+  const avgBars = trades.length
+    ? trades.reduce((a, t) => a + t.bars, 0) / trades.length : 0;
+  return {
+    totalReturnPct: round2((final - 1) * 100),
+    trades: trades.length,
+    winRate: rets.length ? round2(wins.length / rets.length * 100) : null,
+    profitFactor: gl > 0 ? round2(gw / gl) : (gw > 0 ? Infinity : null),
+    avgWinPct: wins.length ? round2(gw / wins.length) : null,
+    avgLossPct: losses.length ? round2(-gl / losses.length) : null,
+    maxDrawdownPct: round2(dd * 100),
+    avgBarsHeld: round2(avgBars),
+  };
+}
+function round2(x) { return isFinite(x) ? Math.round(x * 100) / 100 : x; }
+
+/* ---------- compare all strategies on one dataset ---------- */
+function compareAll(data, exitKey, eParams, paramsByStrategy = {}) {
+  const rows = [];
+  for (const key in STRATEGIES) {
+    const r = runBacktest(data, key, paramsByStrategy[key], exitKey, eParams);
+    rows.push({ strategy: key, label: STRATEGIES[key].label,
+      ...(r.error ? { error: r.error } : r.metrics),
+      equityCurve: r.equityCurve || [] });
+  }
+  const valid = rows.filter(r => !r.error && isFinite(r.totalReturnPct));
+  const best = valid.length
+    ? valid.reduce((a, b) => b.totalReturnPct > a.totalReturnPct ? b : a).strategy
+    : null;
+  return { rows, best };
+}
+
+/* ---------- brute-force parameter optimization ----------
+   Varies every numeric parameter of the chosen strategy AND exit model
+   across {low, default/current, high} values; tests all combinations
+   (bounded), ranks by the chosen objective.                               */
+function optimize(data, stratKey, sParams, exitKey, eParams,
+                  objective = "totalReturnPct", maxCombos = 400) {
+  const dims = [];
+  const addDims = (meta, base, group) => {
+    for (const k in meta) {
+      const m = meta[k];
+      const cur = clampParams({ [k]: m }, { [k]: base?.[k] })[k];
+      const lo = Math.max(m.min, snap(cur * 0.6, m.step));
+      const hi = Math.min(m.max, snap(cur * 1.5, m.step));
+      const vals = [...new Set([lo, cur, hi])];
+      dims.push({ group, key: k, vals });
+    }
+  };
+  addDims(STRATEGIES[stratKey].params, sParams, "s");
+  addDims(EXITS[exitKey].params, eParams, "e");
+
+  let combos = [{}];
+  for (const d of dims) {
+    const next = [];
+    for (const c of combos) for (const v of d.vals)
+      next.push({ ...c, [d.group + ":" + d.key]: v });
+    combos = next;
+    if (combos.length > maxCombos) { combos = combos.slice(0, maxCombos); break; }
+  }
+  const results = [];
+  for (const c of combos) {
+    const sp = { ...sParams }, ep = { ...eParams };
+    for (const k in c) {
+      const [g, key] = k.split(":");
+      (g === "s" ? sp : ep)[key] = c[k];
+    }
+    const r = runBacktest(data, stratKey, sp, exitKey, ep);
+    if (!r.error) results.push({ sp: r.sp, ep: r.ep, ...r.metrics });
+  }
+  results.sort((a, b) => {
+    const av = a[objective] ?? -Infinity, bv = b[objective] ?? -Infinity;
+    return (isFinite(bv) ? bv : -Infinity) - (isFinite(av) ? av : -Infinity);
+  });
+  return { tested: results.length, top: results.slice(0, 15), objective };
+}
+function snap(v, step) { return Math.round(v / step) * step; }
+
+/* ---------- CSV import (optional own data) ---------- */
+function parseCSV(text) {
+  try {
+    const lines = String(text).trim().split(/\r?\n/);
+    const out = [];
+    for (const line of lines) {
+      const parts = line.split(/[,;\t]/).map(s => s.trim());
+      if (parts.length < 4) continue;
+      // accept: open,high,low,close[,volume] with optional leading date
+      const nums = parts.map(Number);
+      const start = isFinite(nums[0]) ? 0 : 1;
+      const [o, h, l, c, v] = nums.slice(start);
+      if ([o, h, l, c].every(x => isFinite(x) && x > 0))
+        out.push({ open: o, high: h, low: l, close: c,
+                   volume: isFinite(v) ? v : 1e6 });
+    }
+    return out.length >= 30 ? out : null;
+  } catch { return null; }
+}
+
+
+</script>
+
+<script>
+/* ====================== UI layer ====================== */
+const $ = id => document.getElementById(id);
+const fmt = (n, d=2) => (n==null || !isFinite(n)) ? "—" :
+  Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = (n, d=2) => (n==null || !isFinite(n)) ? "—" : ((n>=0?"+":"")+fmt(n,d)+"%");
+
+/* ---- persisted settings ---- */
+const DEFAULTS = {
+  strategy: "trend_following", exit: "scale_out", dataset: "uptrend",
+  sParams: {}, eParams: {},        // per-key param maps: sParams[strategy][param]
+};
+let CFG = loadCfg();
+let customData = null;             // pasted CSV dataset (not persisted: can be large)
+function loadCfg(){ try{
+    const raw = localStorage.getItem("fqlab");
+    if (raw) return Object.assign(structuredClone(DEFAULTS), JSON.parse(raw));
+  }catch(e){} return structuredClone(DEFAULTS); }
+function saveCfg(){ try{ localStorage.setItem("fqlab", JSON.stringify(CFG)); }catch(e){} }
+function resetSettings(){
+  if(!confirm("Reset all strategy/exit parameters and selections to defaults?")) return;
+  CFG = structuredClone(DEFAULTS); saveCfg(); initSelectors(); runNow();
+}
+
+/* ---- dynamic parameter forms ---- */
+function paramsFor(group, key){               // current values for strategy/exit `key`
+  const meta = (group==="s"?STRATEGIES:EXITS)[key].params;
+  const store = group==="s"?CFG.sParams:CFG.eParams;
+  store[key] = clampParams(meta, store[key]||{});
+  return store[key];
+}
+function renderParamForm(group, key, mountId){
+  const def = (group==="s"?STRATEGIES:EXITS)[key];
+  const vals = paramsFor(group, key);
+  $(mountId).innerHTML = Object.entries(def.params).map(([k,m])=>`
+    <div class="param">
+      <label for="${group}_${k}">${m.label}</label>
+      <input id="${group}_${k}" type="number" value="${vals[k]}"
+        min="${m.min}" max="${m.max}" step="${m.step}"
+        oninput="onParam('${group}','${key}','${k}',this.value)">
+    </div>`).join("");
+}
+let debounceT = null;
+function onParam(group, key, k, value){
+  const store = group==="s"?CFG.sParams:CFG.eParams;
+  (store[key] = store[key]||{})[k] = Number(value);
+  saveCfg();
+  clearTimeout(debounceT);
+  debounceT = setTimeout(runNow, 160);        // instant-feel recalculation
+}
+
+/* ---- selectors ---- */
+function initSelectors(){
+  $("stratSel").innerHTML = Object.entries(STRATEGIES).map(([k,s])=>
+    `<option value="${k}" ${k===CFG.strategy?"selected":""}>${s.label}</option>`).join("");
+  $("exitSel").innerHTML = Object.entries(EXITS).map(([k,x])=>
+    `<option value="${k}" ${k===CFG.exit?"selected":""}>${x.label}</option>`).join("");
+  $("dataSel").innerHTML = Object.entries(DATASETS).map(([k,d])=>
+    `<option value="${k}" ${k===CFG.dataset?"selected":""}>${d.label}</option>`).join("")
+    + `<option value="__custom" ${CFG.dataset==="__custom"?"selected":""}>Pasted CSV data</option>`;
+  onStrategyChange(false); onExitChange(false);
+}
+function onStrategyChange(run=true){
+  CFG.strategy = $("stratSel").value; saveCfg();
+  $("stratDesc").textContent = STRATEGIES[CFG.strategy].desc;
+  renderParamForm("s", CFG.strategy, "stratParams");
+  if(run) runNow();
+}
+function onExitChange(run=true){
+  CFG.exit = $("exitSel").value; saveCfg();
+  $("exitDesc").textContent = EXITS[CFG.exit].desc;
+  renderParamForm("e", CFG.exit, "exitParams");
+  if(run) runNow();
+}
+function onDataChange(){ CFG.dataset = $("dataSel").value; saveCfg(); runNow(); }
+function loadCSV(){
+  const parsed = parseCSV($("csvBox").value);
+  if(!parsed){ $("csvMsg").textContent = "✗ couldn't read that — need ≥30 lines of open,high,low,close"; return; }
+  customData = parsed;
+  CFG.dataset = "__custom"; saveCfg(); initSelectors();
+  $("csvMsg").textContent = `✓ loaded ${parsed.length} bars`;
+  runNow();
+}
+function currentData(){
+  if (CFG.dataset === "__custom"){
+    if (customData) return customData;
+    $("csvMsg") && ($("csvMsg").textContent = "paste CSV again after refresh — using sample data");
+    return DATASETS.uptrend.gen();
+  }
+  return (DATASETS[CFG.dataset] || DATASETS.uptrend).gen();
+}
+
+/* ---- run + render ---- */
+let lastResult = null;
+function runNow(){
+  const data = currentData();
+  const r = runBacktest(data, CFG.strategy,
+    paramsFor("s", CFG.strategy), CFG.exit, paramsFor("e", CFG.exit));
+  lastResult = r;
+  if (r.error){
+    $("signalBox").textContent = "⚠ " + r.error;
+    $("metrics").innerHTML = ""; $("tradeRows").innerHTML = ""; $("eventRows").innerHTML="";
+    drawCurve([]); return;
+  }
+  // signal badge + box
+  const sig = r.lastSignal;
+  $("sigBadge").textContent = "SIGNAL: " + (sig.signal ? "YES — ENTER" : "NO");
+  $("sigBadge").className = "badge " + (sig.signal ? "yes" : "no");
+  $("signalBox").textContent =
+    (sig.signal ? "ENTRY SIGNAL: YES\n" : "ENTRY SIGNAL: NO\n") + sig.reason
+    + "\n\n(strategy: " + STRATEGIES[CFG.strategy].label
+    + "  ·  exit: " + EXITS[CFG.exit].label + ")";
+  // metrics
+  const m = r.metrics;
+  const kpi = (l,v,cls="") =>
+    `<div class="kpi"><div class="l">${l}</div><div class="v ${cls}">${v}</div></div>`;
+  $("metrics").innerHTML =
+    kpi("Total return", pct(m.totalReturnPct), m.totalReturnPct>=0?"pos":"neg")+
+    kpi("Trades", m.trades)+
+    kpi("Win rate", m.winRate==null?"—":fmt(m.winRate,0)+"%")+
+    kpi("Profit factor", m.profitFactor===Infinity?"∞":fmt(m.profitFactor))+
+    kpi("Avg win", pct(m.avgWinPct), "pos")+
+    kpi("Avg loss", pct(m.avgLossPct), "neg")+
+    kpi("Max drawdown", fmt(m.maxDrawdownPct)+"%", "neg")+
+    kpi("Avg bars held", fmt(m.avgBarsHeld,1));
+  // trades
+  $("tradeCount").textContent = r.trades.length;
+  $("tradeRows").innerHTML = r.trades.length ? r.trades.map((t,i)=>`<tr>
+    <td>${i+1}</td><td class="num">${t.entryIdx}</td><td class="num">${t.exitIdx}</td>
+    <td class="num">${t.bars}</td><td class="num">${fmt(t.entry)}</td>
+    <td class="num">${fmt(t.exit)}</td><td class="num">${(t.frac*100).toFixed(0)}%</td>
+    <td class="num ${t.retPct>=0?"pos":"neg"}">${pct(t.retPct,1)}</td>
+    <td class="reason">in: ${t.entryReason}<br>out: ${t.exitReason}</td></tr>`).join("")
+    : `<tr><td colspan="9" class="hint">No trades — the entry rules never fired on this data. Try loosening parameters.</td></tr>`;
+  // events
+  $("eventRows").innerHTML = r.events.slice(-120).reverse().map(e=>`<tr>
+    <td class="num">${e.bar}</td>
+    <td class="reason" style="color:${e.kind==="BUY"?"var(--green)":e.kind==="SELL-"?"var(--red)":e.kind==="SELL+"?"var(--amber)":"var(--dim)"}">${e.kind} — ${e.text}</td></tr>`).join("");
+  // chart
+  $("curveLegend").textContent = "";
+  drawCurve([{ curve: r.equityCurve, color: "#2dd4bf",
+               label: STRATEGIES[CFG.strategy].label }]);
+  $("comparePanel").style.display = "none";
+}
+
+/* ---- comparison ---- */
+function runCompare(){
+  const data = currentData();
+  const c = compareAll(data, CFG.exit, paramsFor("e", CFG.exit), CFG.sParams);
+  $("comparePanel").style.display = "";
+  $("compareRows").innerHTML = c.rows.map(r=>`<tr class="${r.strategy===c.best?"best":""}">
+    <td>${r.label}${r.strategy===c.best?' <span class="badge yes">BEST</span>':""}</td>
+    ${r.error?`<td colspan="5" class="hint">${r.error}</td>`:`
+    <td class="num ${r.totalReturnPct>=0?"pos":"neg"}">${pct(r.totalReturnPct,1)}</td>
+    <td class="num">${r.trades}</td>
+    <td class="num">${r.winRate==null?"—":fmt(r.winRate,0)+"%"}</td>
+    <td class="num">${r.profitFactor===Infinity?"∞":fmt(r.profitFactor)}</td>
+    <td class="num">${fmt(r.maxDrawdownPct,1)}%</td>`}</tr>`).join("");
+  // overlay all equity curves
+  const palette = ["#2dd4bf","#3b82f6","#8b5cf6","#ffc861","#ff6b81"];
+  drawCurve(c.rows.filter(r=>!r.error).map((r,i)=>
+    ({curve:r.equityCurve,color:palette[i%palette.length],label:r.label})));
+  $("curveLegend").textContent = "all strategies, " + EXITS[CFG.exit].label;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---- optimizer ---- */
+function runOptimize(){
+  const data = currentData();
+  $("optPanel").style.display = "";
+  $("optInfo").textContent = "running…";
+  $("optRows").innerHTML = "";
+  setTimeout(()=>{                          // let the UI paint first
+    const objective = $("optObjective").value;
+    const o = optimize(data, CFG.strategy, paramsFor("s",CFG.strategy),
+                       CFG.exit, paramsFor("e",CFG.exit), objective);
+    $("optInfo").textContent =
+      `${o.tested} combinations tested · ranked by ${objective.replace("Pct","")} · click Apply to use a setting`;
+    window.__opt = o.top;
+    $("optRows").innerHTML = o.top.map((t,i)=>{
+      const params = Object.entries(t.sp).map(([k,v])=>k+"="+v)
+        .concat(Object.entries(t.ep).map(([k,v])=>k+"="+v)).join("  ");
+      return `<tr><td>${i+1}</td>
+        <td class="num ${t.totalReturnPct>=0?"pos":"neg"}">${pct(t.totalReturnPct,1)}</td>
+        <td class="num">${t.winRate==null?"—":fmt(t.winRate,0)+"%"}</td>
+        <td class="num">${t.profitFactor===Infinity?"∞":fmt(t.profitFactor)}</td>
+        <td class="num">${fmt(t.maxDrawdownPct,1)}%</td>
+        <td class="reason" style="font-family:var(--mono)">${params}</td>
+        <td><button class="sm" onclick="applyOpt(${i})">Apply</button></td></tr>`;
+    }).join("") || `<tr><td colspan="7" class="hint">No valid results.</td></tr>`;
+  }, 30);
+}
+function applyOpt(i){
+  const t = window.__opt?.[i]; if(!t) return;
+  CFG.sParams[CFG.strategy] = {...t.sp};
+  CFG.eParams[CFG.exit] = {...t.ep};
+  saveCfg();
+  renderParamForm("s", CFG.strategy, "stratParams");
+  renderParamForm("e", CFG.exit, "exitParams");
+  runNow();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---- equity curve canvas (multi-series) ---- */
+function drawCurve(series){
+  const cv = $("curve"), ctx = cv.getContext("2d");
+  const W = cv.width = cv.clientWidth * (window.devicePixelRatio||1);
+  const H = cv.height = 220 * (window.devicePixelRatio||1);
+  ctx.clearRect(0,0,W,H);
+  const all = series.flatMap(s=>s.curve);
+  if(!all.length){ return; }
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi - lo < 1e-9){ hi = lo + 1; }
+  const pad = 10*(window.devicePixelRatio||1);
+  const xOf = (i,n)=> pad + (W-2*pad) * (n<=1?0:i/(n-1));
+  const yOf = v => H - pad - (H-2*pad) * ((v-lo)/(hi-lo));
+  // baseline at 1.0 (start)
+  ctx.strokeStyle = "rgba(255,255,255,.15)"; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad, yOf(1)); ctx.lineTo(W-pad, yOf(1)); ctx.stroke();
+  ctx.setLineDash([]);
+  for (const s of series){
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.6*(window.devicePixelRatio||1);
+    ctx.beginPath();
+    s.curve.forEach((v,i)=>{ const x=xOf(i,s.curve.length), y=yOf(v);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+  }
+  // legend
+  ctx.font = `${11*(window.devicePixelRatio||1)}px ui-monospace`;
+  let lx = pad+4;
+  for (const s of series){
+    ctx.fillStyle = s.color;
+    ctx.fillText("— "+s.label, lx, pad+10*(window.devicePixelRatio||1));
+    lx += ctx.measureText("— "+s.label).width + 14;
+  }
+}
+
+/* ---- boot ---- */
+initSelectors();
+runNow();
+
+/* ---- DataHub handoff: read bars from sessionStorage on load ---- */
+(function(){
+  try{
+    const raw = sessionStorage.getItem('DATAHUB_BARS');
+    if(raw){
+      const pkg = JSON.parse(raw);
+      if(pkg && pkg.bars && pkg.bars.length){
+        customData = pkg.bars.map(b=>({open:+b.open,high:+b.high,low:+b.low,close:+b.close,volume:+(b.volume||0)}));
+        CFG.dataset = "__custom"; saveCfg();
+        initSelectors();
+        const sel = document.getElementById("dataSel");
+        if(sel){
+          let opt=[...sel.options].find(o=>o.value==="__custom");
+          if(opt) opt.textContent = pkg.label ? ("● "+pkg.label) : "Live data (DataHub)";
+          sel.value="__custom";
+        }
+        const cm=document.getElementById("csvMsg");
+        if(cm) cm.textContent = "✓ loaded "+customData.length+" bars from DataHub"+(pkg.label?": "+pkg.label:"");
+        runNow();
+      }
+    }
+  }catch(e){ console.error('DataHub handoff error:', e); }
+})();
+
+
+/* ---- DataHub bridge: receive bars from parent window via postMessage ---- */
+window.addEventListener("message", function(ev){
+  const msg = ev.data;
+  if(!msg || msg.type !== "DATAHUB_LOAD_BARS") return;
+  try{
+    const bars = (msg.bars||[]).map(b=>({
+      open:+b.open, high:+b.high, low:+b.low, close:+b.close, volume:+(b.volume||0)
+    }));
+    if(!bars.length) return;
+    customData = bars;
+    CFG.dataset = "__custom"; saveCfg();
+    initSelectors();
+    const sel = document.getElementById("dataSel");
+    if(sel){
+      let opt=[...sel.options].find(o=>o.value==="__custom");
+      if(opt) opt.textContent = msg.label ? ("● "+msg.label) : "Live data (DataHub)";
+      sel.value="__custom";
+    }
+    const cm=document.getElementById("csvMsg");
+    if(cm) cm.textContent = "✓ loaded "+bars.length+" bars from DataHub"+(msg.label?": "+msg.label:"");
+    runNow();
+    // tell parent we're ready (optional ack)
+    parent.postMessage({type:"DATAHUB_LAB_READY", bars:bars.length}, "*");
+  }catch(e){ console.error("DataHub bridge error:", e); }
+});
+// announce readiness on load so parent can flush a queued payload
+parent.postMessage({type:"DATAHUB_LAB_BOOTED"}, "*");
+
+window.addEventListener("resize", ()=>{ if(lastResult && !lastResult.error)
+  drawCurve([{curve:lastResult.equityCurve,color:"#2dd4bf",
+              label:STRATEGIES[CFG.strategy].label}]); });
+</script>
+</body>
+</html>
