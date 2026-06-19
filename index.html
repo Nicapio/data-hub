@@ -62,9 +62,12 @@ body{min-height:100vh;color:var(--text);
 .tab:hover:not(.active){color:var(--text)}
 .tabcontent{display:none}
 .tabcontent.active{display:block}
-/* Lab tab stays rendered (off-screen) when inactive so its iframe keeps running */
-#tab-lab{display:block;position:absolute;left:-99999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
-#tab-lab.active{position:static;left:auto;width:auto;height:auto;overflow:visible;opacity:1;pointer-events:auto}
+/* Lab tab stays rendered at FULL SIZE when inactive (just moved off-screen) so its
+   iframe loads and lays out at correct dimensions, like a normal visible page */
+#tab-lab{display:block;position:fixed;left:0;top:0;width:100%;height:100%;
+  visibility:hidden;opacity:0;pointer-events:none;z-index:-1}
+#tab-lab.active{position:static;visibility:visible;opacity:1;
+  pointer-events:auto;z-index:auto;height:auto}
 
 /* ---- layout ---- */
 .page{padding:0 16px 20px;max-width:1700px;margin:0 auto}
@@ -1581,38 +1584,56 @@ function setLabStatus(txt) {
 function ensureLabFrame() {
   const f = $('labFrame');
   if (f.dataset.loaded === '1') return f;
-  const htmlText = getLabHtml();
-  if (!htmlText) return f;
+
+  const holder = document.getElementById('labB64');
+  if (!holder) { setLabStatus('DIAG: labB64 holder NOT FOUND'); return f; }
+  const raw = (holder.textContent || '').trim();
+  if (!raw) { setLabStatus('DIAG: labB64 is EMPTY'); return f; }
+
+  let htmlText = '';
+  try {
+    const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+    htmlText = new TextDecoder('utf-8').decode(bytes);
+  } catch (e) { setLabStatus('DIAG: base64 decode FAILED — ' + e.message); return f; }
+
+  if (!htmlText || htmlText.length < 1000) {
+    setLabStatus('DIAG: decoded HTML too short (' + htmlText.length + ' chars)');
+    return f;
+  }
 
   // attach load/error handlers once
   if (!f.dataset.wired) {
     f.dataset.wired = '1';
-    f.addEventListener('load', () => setLabStatus('Strategy Lab ready'));
-    f.addEventListener('error', () => setLabStatus('iframe failed to load'));
+    f.addEventListener('load', () => setLabStatus('Strategy Lab loaded (' + htmlText.length + ' chars)'));
+    f.addEventListener('error', () => setLabStatus('DIAG: iframe error event fired'));
   }
 
-  let done = false;
-  // Method 1: Blob URL (works on https + file://)
+  let done = false, method = '';
+  // Method 1: srcdoc (most compatible on GitHub Pages https)
   try {
-    if (__labUrl) URL.revokeObjectURL(__labUrl);
-    __labUrl = URL.createObjectURL(new Blob([htmlText], { type: 'text/html' }));
-    f.src = __labUrl;
-    done = true;
+    f.setAttribute('srcdoc', htmlText);
+    done = true; method = 'srcdoc';
   } catch (e) { /* fall through */ }
 
-  // Method 2: direct document.write (fallback)
+  // Method 2: Blob URL
   if (!done) {
     try {
-      const doc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
-      if (doc) { doc.open(); doc.write(htmlText); doc.close(); done = true; }
+      if (__labUrl) URL.revokeObjectURL(__labUrl);
+      __labUrl = URL.createObjectURL(new Blob([htmlText], { type: 'text/html' }));
+      f.src = __labUrl; done = true; method = 'blob';
     } catch (e) { /* fall through */ }
   }
 
-  // Method 3: srcdoc (last resort)
-  if (!done) { f.setAttribute('srcdoc', htmlText); done = true; }
+  // Method 3: document.write
+  if (!done) {
+    try {
+      const doc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
+      if (doc) { doc.open(); doc.write(htmlText); doc.close(); done = true; method = 'write'; }
+    } catch (e) { /* fall through */ }
+  }
 
   f.dataset.loaded = done ? '1' : '0';
-  if (!done) setLabStatus('could not load Strategy Lab in this browser');
+  setLabStatus(done ? ('loading Lab via ' + method + '…') : 'DIAG: ALL load methods failed');
   return f;
 }
 function reloadLab() {
@@ -1684,12 +1705,13 @@ $('tickerBox').addEventListener('input', onTickerInput);
 $('prevTo').value = today();
 $('prevFrom').value = daysAgo(365);
 
+// load the Strategy Lab iframe immediately — independent of IndexedDB
+try { ensureLabFrame(); } catch(e){ setLabStatus('DIAG: ensureLabFrame threw — ' + e.message); }
+
 openDB().then(async () => {
   loadCfg();
   await refreshLibrary();
   log('ok', 'IndexedDB ready. Configure source and paste tickers to begin.');
-  // load the Strategy Lab iframe right away (it's always in the DOM, off-screen until its tab is active)
-  try { ensureLabFrame(); } catch(e){}
 }).catch(e => {
   $('storBadge').textContent = 'DB error';
   $('storBadge').className = 'badge err';
