@@ -227,7 +227,6 @@ details summary{cursor:pointer;color:var(--dim);font-size:11px;letter-spacing:.0
   <div class="tab" onclick="switchTab('library')">② Library</div>
   <div class="tab" onclick="switchTab('preview')">③ Preview</div>
   <div class="tab" onclick="switchTab('export')">④ Export</div>
-  <div class="tab" onclick="switchTab('lab')">⑤ Strategy Lab</div>
 </div>
 
 <!-- ==================== TAB: DOWNLOAD ==================== -->
@@ -552,25 +551,6 @@ details summary{cursor:pointer;color:var(--dim);font-size:11px;letter-spacing:.0
 </div>
 </div>
 </div>
-
-<!-- ==================== TAB: STRATEGY LAB ==================== -->
-<div id="tab-lab" class="tabcontent">
-<div class="page" style="padding-top:14px">
-  <div class="panel"><h2>Strategy Lab</h2><div class="body stack">
-    <div class="hint">The Strategy Lab opens in its own browser tab with your downloaded data loaded automatically, then runs the backtest. Use the <b>Backtest</b> button on any symbol in the Library, or <b>Send to Strategy Lab</b> from the Preview tab.</div>
-    <div>
-      <label>Or pick a stored symbol to open in the Lab</label>
-      <select id="labPickSym"><option value="">— choose symbol —</option></select>
-    </div>
-    <button class="primary" onclick="openLabForPicked()">▶ Open Strategy Lab</button>
-    <div class="hint" id="labOpenMsg"></div>
-    <hr class="sep">
-    <div class="hint">The Lab page is <span class="mono">FutuQuant-StrategyLab-Linked.html</span> — keep it in the same folder as this file (or same GitHub repo) so the link works.</div>
-  </div></div>
-</div>
-</div>
-
-
 
 <script>
 /* ========================================================================
@@ -1173,23 +1153,6 @@ function populateSelectors(rows) {
       syms.map(s=>`<option value="${s}">${s}</option>`).join('');
     if (v) sel.value = v;
   });
-  // lab launcher picker
-  const lp = $('labPickSym');
-  if (lp) {
-    const lv = lp.value;
-    lp.innerHTML = '<option value="">— choose symbol —</option>' +
-      syms.map(s=>`<option value="${s}">${s}</option>`).join('');
-    if (lv) lp.value = lv;
-  }
-}
-function populateLabPicker() {
-  const lp = $('labPickSym');
-  if (lp && libCache) {
-    const lv = lp.value;
-    lp.innerHTML = '<option value="">— choose symbol —</option>' +
-      libCache.map(r=>`<option value="${r.symbol}">${r.symbol}</option>`).join('');
-    if (lv) lp.value = lv;
-  }
 }
 
 /* ---- preview / chart ---- */
@@ -1610,28 +1573,18 @@ async function backtestCurrent() {
   const bars = rec.bars.filter(b => (!from||b.date>=from) && (!to||b.date<=to));
   openLabWithBars(bars, sym + ' ' + from + '\u2192' + to);
 }
-async function openLabForPicked() {
-  const sym = $('labPickSym').value;
-  if (!sym) { alert('Pick a symbol first.'); return; }
-  const rec = await dbGet(sym);
-  if (!rec) { alert('Symbol not found.'); return; }
-  openLabWithBars(rec.bars, sym + ' (' + rec.bars.length + ' bars)');
-}
-
-
 /* ---- tabs ---- */
 function switchTab(name) {
   document.querySelectorAll('.tabcontent').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   $(`tab-${name}`).classList.add('active');
-  const tabs = ['download','library','preview','export','lab'];
+  const tabs = ['download','library','preview','export'];
   document.querySelectorAll('.tab')[tabs.indexOf(name)]?.classList.add('active');
   if (name==='library') refreshLibrary();
   if (name==='preview') {
     const ps=$('prevSym');
     if(ps.value) loadPreview();
   }
-  if (name==='lab') populateLabPicker();
 }
 
 /* ---- boot ---- */
